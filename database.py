@@ -9,6 +9,7 @@ import uuid
 import re
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
+from urllib.parse import urlparse
 
 
 class TestCaseDatabase:
@@ -20,7 +21,7 @@ class TestCaseDatabase:
         
         Args:
             config: Database configuration dictionary with keys:
-                   - server: SQL Server name (e.g., 'LPT2646-B1')
+                   - server: SQL Server name (e.g., 'LPT2149-B1')
                    - database: Database name (e.g., 'API_Test_Cases')
                    - username: Username (e.g., 'testUser1')
                    - password: Password (e.g., 'TestUser@1')
@@ -35,7 +36,7 @@ class TestCaseDatabase:
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default database configuration."""
         return {
-            'server': 'LPT2646-B1',
+            'server': 'LPT2149-B1',
             'database': 'TestCasesDB',
             'driver': '{ODBC Driver 17 for SQL Server}',
             'use_windows_auth': True  # Use Windows Authentication
@@ -82,22 +83,30 @@ class TestCaseDatabase:
             Valid SQL Server table name
         """
         # Normalize base_url: remove protocol, replace special chars
-        if base_url:
-            # Remove http:// or https://
-            if base_url.startswith('http://'):
-                base_url = base_url[7:]
-            elif base_url.startswith('https://'):
-                base_url = base_url[8:]
+        # if base_url:
+        #     # Remove http:// or https://
+        #     if base_url.startswith('http://'):
+        #         base_url = base_url[7:]
+        #     elif base_url.startswith('https://'):
+        #         base_url = base_url[8:]
             
-            # Replace dots, slashes, and other special chars with underscores
-            base_url_clean = ''.join(c if c.isalnum() else '_' for c in base_url)
-            # Remove consecutive underscores
-            while '__' in base_url_clean:
-                base_url_clean = base_url_clean.replace('__', '_')
-            # Remove leading/trailing underscores
-            base_url_clean = base_url_clean.strip('_')
+        #     # Replace dots, slashes, and other special chars with underscores
+        #     base_url_clean = ''.join(c if c.isalnum() else '_' for c in base_url)
+        #     # Remove consecutive underscores
+        #     while '__' in base_url_clean:
+        #         base_url_clean = base_url_clean.replace('__', '_')
+        #     # Remove leading/trailing underscores
+        #     base_url_clean = base_url_clean.strip('_')
+        # else:
+        #     base_url_clean = 'default'
+
+        hostname = urlparse(base_url).hostname if base_url else None
+
+        if hostname:
+        # Extract the first part of the hostname
+            url_name = hostname.split('.')[0]
         else:
-            base_url_clean = 'default'
+            url_name = 'default'
         
         # Normalize endpoint: remove leading slash, replace special chars
         if endpoint:
@@ -113,7 +122,7 @@ class TestCaseDatabase:
         method_clean = method.upper()
         
         # Combine and ensure table name is valid (max 128 chars in SQL Server)
-        table_name = f"test_cases_{base_url_clean}_{endpoint_clean}_{method_clean}"
+        table_name = f"test_cases_{url_name}_{endpoint_clean}_{method_clean}"
         
         # Truncate if too long
         if len(table_name) > 128:
@@ -147,6 +156,9 @@ class TestCaseDatabase:
             table_exists = cursor.fetchone()[0] > 0
             
             if table_exists:
+                if not self._can_replace_test_case_table(table_name, cursor):
+                    return False
+
                 # Table exists, delete it and related session records
                 print(f"Table '{table_name}' already exists. Deleting and recreating...")
                 
@@ -194,6 +206,28 @@ class TestCaseDatabase:
             
         except Exception as e:
             print(f"Error ensuring table '{table_name}' exists: {e}")
+            return False
+
+    def _can_replace_test_case_table(self, table_name: str, cursor) -> bool:
+        """Return False when a suite currently references the test-case table."""
+        try:
+            cursor.execute("""
+                IF OBJECT_ID('active_test_suite_cases', 'U') IS NOT NULL
+                SELECT COUNT(*) FROM active_test_suite_cases WHERE table_name = ?
+                ELSE
+                SELECT 0
+            """, table_name)
+            row = cursor.fetchone()
+            references = int(row[0]) if row and row[0] is not None else 0
+            if references:
+                print(
+                    f"Cannot replace test case table '{table_name}': "
+                    f"{references} suite relation(s) exist"
+                )
+                return False
+            return True
+        except Exception as e:
+            print(f"Error checking suite references for '{table_name}': {e}")
             return False
 
     def _ensure_active_testcase_pool_table_exists(self, cursor) -> bool:
@@ -247,10 +281,121 @@ class TestCaseDatabase:
                 CREATE INDEX idx_active_test_suites_active ON active_test_suites(is_active)
             """)
 
+            cursor.execute("""
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='active_test_suite_cases' AND xtype='U')
+                CREATE TABLE active_test_suite_cases (
+                    suite_id NVARCHAR(100) NOT NULL,
+                    table_name NVARCHAR(255) NOT NULL,
+                    test_case_id NVARCHAR(100) NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    CONSTRAINT pk_active_test_suite_cases
+                        PRIMARY KEY (suite_id, table_name, test_case_id),
+                    CONSTRAINT fk_active_test_suite_cases_suite
+                        FOREIGN KEY (suite_id) REFERENCES active_test_suites(suite_id)
+                        ON DELETE CASCADE
+                )
+            """)
+
+            cursor.execute("""
+                IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='idx_active_test_suite_cases_table')
+                CREATE INDEX idx_active_test_suite_cases_table
+                    ON active_test_suite_cases(table_name, test_case_id)
+            """)
+
             return True
         except Exception as e:
             print(f"Error ensuring 'active_test_suites' table exists: {e}")
             return False
+
+    def _ensure_api_specifications_table_exists(self, cursor) -> bool:
+        """Ensure uploaded Swagger/OpenAPI documents can be persisted."""
+        try:
+            cursor.execute("""
+                IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='api_specifications' AND xtype='U')
+                CREATE TABLE api_specifications (
+                    spec_id NVARCHAR(100) PRIMARY KEY,
+                    spec_name NVARCHAR(255) NOT NULL,
+                    base_url NVARCHAR(1000),
+                    spec_data NVARCHAR(MAX) NOT NULL,
+                    created_at DATETIME DEFAULT GETDATE(),
+                    updated_at DATETIME DEFAULT GETDATE()
+                )
+            """)
+            cursor.execute("""
+                IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='idx_api_specifications_name')
+                CREATE INDEX idx_api_specifications_name ON api_specifications(spec_name)
+            """)
+            return True
+        except Exception as e:
+            print(f"Error ensuring 'api_specifications' table exists: {e}")
+            return False
+
+    def save_api_specification(self, spec_id: str, spec_name: str, base_url: str, spec_data: Dict[str, Any]) -> Tuple[bool, str]:
+        """Persist a normalized Swagger/OpenAPI document."""
+        success, message = self.test_connection()
+        if not success:
+            success, message = self._create_database_and_tables()
+            if not success:
+                return False, message
+
+        conn = None
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            if not self._ensure_api_specifications_table_exists(cursor):
+                return False, "Failed to create or verify api_specifications table"
+            cursor.execute("""
+                MERGE api_specifications AS target
+                USING (SELECT ? AS spec_id) AS source ON target.spec_id = source.spec_id
+                WHEN MATCHED THEN UPDATE SET
+                    spec_name = ?, base_url = ?, spec_data = ?, updated_at = GETDATE()
+                WHEN NOT MATCHED THEN INSERT
+                    (spec_id, spec_name, base_url, spec_data)
+                    VALUES (?, ?, ?, ?);
+            """, spec_id, spec_name, base_url, json.dumps(spec_data, ensure_ascii=False),
+                spec_id, spec_name, base_url, json.dumps(spec_data, ensure_ascii=False))
+            conn.commit()
+            return True, "API specification saved"
+        except Exception as e:
+            if conn is not None:
+                conn.rollback()
+            return False, f"Failed to save API specification: {e}"
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def get_api_specifications(self) -> Tuple[bool, str, List[Dict[str, Any]]]:
+        """Load normalized Swagger/OpenAPI documents."""
+        success, message = self.test_connection()
+        if not success:
+            success, message = self._create_database_and_tables()
+            if not success:
+                return False, message, []
+        conn = None
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            if not self._ensure_api_specifications_table_exists(cursor):
+                return False, "Failed to create or verify api_specifications table", []
+            cursor.execute("SELECT spec_id, spec_name, base_url, spec_data FROM api_specifications ORDER BY updated_at DESC")
+            specifications = []
+            for row in cursor.fetchall():
+                try:
+                    data = json.loads(row.spec_data)
+                except (TypeError, json.JSONDecodeError):
+                    data = {}
+                specifications.append({
+                    'id': row.spec_id,
+                    'name': row.spec_name,
+                    'base_url': row.base_url or '',
+                    'data': data
+                })
+            return True, f"Loaded {len(specifications)} API specifications", specifications
+        except Exception as e:
+            return False, f"Failed to load API specifications: {e}", []
+        finally:
+            if conn is not None:
+                conn.close()
     
     def _extract_response_code(self, expected_str: str) -> str:
         """
@@ -456,6 +601,11 @@ class TestCaseDatabase:
                 conn.rollback()
                 conn.close()
                 return False, "Failed to create or verify active_test_suites table"
+
+            if not self._ensure_api_specifications_table_exists(cursor):
+                conn.rollback()
+                conn.close()
+                return False, "Failed to create or verify api_specifications table"
             
             conn.commit()
             conn.close()
@@ -509,11 +659,17 @@ class TestCaseDatabase:
             
             # Generate table name for this endpoint/method combination
             table_name = self._generate_table_name(base_url, endpoint, method)
-            print(f"[DEBUG] Generated table name: {table_name}")
+            # Debug only.
+            # print(f"[DEBUG] Generated table name: {table_name}")
             
             # Ensure the table exists
             if not self._ensure_table_exists(table_name, cursor):
-                return False, f"Failed to create or verify table '{table_name}'", None, 0
+                conn.rollback()
+                conn.close()
+                return False, (
+                    f"Cannot replace test-case table '{table_name}': "
+                    "it is referenced by an active test suite"
+                ), None, 0
             
             # Filter test cases: only save those matching the frontend values
             filtered_test_cases = []
@@ -529,14 +685,17 @@ class TestCaseDatabase:
                     tc_base_url == base_url):
                     filtered_test_cases.append(test_case)
                 else:
-                    print(f"[DEBUG] Skipping test case - doesn't match frontend values:")
-                    print(f"  Test case: endpoint={tc_endpoint}, method={tc_method}, base_url={tc_base_url}")
-                    print(f"  Frontend: endpoint={endpoint}, method={method}, base_url={base_url}")
+                    # Debug only.
+                    # print("[DEBUG] Skipping test case - doesn't match frontend values:")
+                    # print(f"  Test case: endpoint={tc_endpoint}, method={tc_method}, base_url={tc_base_url}")
+                    # print(f"  Frontend: endpoint={endpoint}, method={method}, base_url={base_url}")
+                    pass
             
             if not filtered_test_cases:
                 return False, "No test cases match the frontend values (base URL, endpoint, method)", None, 0
             
-            print(f"[DEBUG] Filtered {len(filtered_test_cases)}/{len(test_cases)} test cases that match frontend values")
+            # Debug only.
+            # print(f"[DEBUG] Filtered {len(filtered_test_cases)}/{len(test_cases)} test cases that match frontend values")
             
             # Save session with filtered count
             cursor.execute("""
@@ -763,6 +922,31 @@ class TestCaseDatabase:
             if not self._ensure_active_test_suites_table_exists(cursor):
                 return False, "Failed to create or verify active_test_suites table", 0
 
+            normalized_names = {}
+            for suite in suites:
+                if not isinstance(suite, dict):
+                    continue
+                suite_name = str(suite.get('name') or 'Unnamed Suite').strip()
+                name_key = suite_name.casefold()
+                if name_key in normalized_names:
+                    return False, f"DUPLICATE_SUITE_NAME: Suite name '{suite_name}' already exists", 0
+                normalized_names[name_key] = suite_name
+
+            cursor.execute("SELECT suite_id, suite_name FROM active_test_suites")
+            existing_names = {}
+            for row in cursor.fetchall():
+                name_key = str(row.suite_name or '').strip().casefold()
+                existing_names.setdefault(name_key, set()).add(str(row.suite_id))
+
+            for suite in suites:
+                if not isinstance(suite, dict):
+                    continue
+                suite_name = str(suite.get('name') or 'Unnamed Suite').strip()
+                suite_id = str(suite.get('id') or '')
+                conflicting_ids = existing_names.get(suite_name.casefold(), set()) - {suite_id}
+                if conflicting_ids:
+                    return False, f"DUPLICATE_SUITE_NAME: Suite name '{suite_name}' already exists", 0
+
             cursor.execute("DELETE FROM active_test_suites")
 
             for suite_index, suite in enumerate(suites, 1):
@@ -788,6 +972,28 @@ class TestCaseDatabase:
                     (suite_id, suite_name, suite_index, suite_data, is_active, updated_at)
                     VALUES (?, ?, ?, ?, ?, GETDATE())
                 """, suite_id, suite_name, suite_index, suite_json, is_active)
+
+                for test_case in suite_cases:
+                    if not isinstance(test_case, dict):
+                        continue
+                    test_case_id = str(
+                        test_case.get('id') or
+                        test_case.get('test_case_id') or
+                        test_case.get('test_case_number') or
+                        ''
+                    ).strip()[:100]
+                    if not test_case_id:
+                        continue
+                    table_name = self._generate_table_name(
+                        test_case.get('baseUrl', test_case.get('base_url', '')) or 'custom',
+                        test_case.get('endpoint', '/api/test'),
+                        test_case.get('method', 'GET')
+                    )
+                    cursor.execute("""
+                        INSERT INTO active_test_suite_cases
+                        (suite_id, table_name, test_case_id)
+                        VALUES (?, ?, ?)
+                    """, suite_id, table_name, test_case_id)
                 saved_count += 1
 
             conn.commit()

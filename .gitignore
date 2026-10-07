@@ -47,6 +47,7 @@ backup_*/
 
 # Logs
 *.log
+saved_templates.json
 
 # Temporary files
 temp/

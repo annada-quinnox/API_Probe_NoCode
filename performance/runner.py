@@ -736,18 +736,19 @@ class APIUser(HttpUser):
         f"\n🚀 Starting Locust Load Test on "
         f"{base_url}{current_endpoint} [{method}]..."
     )
-    print("\n" + "=" * 70)
-    print("LOCUST TARGET DEBUG")
-    print("=" * 70)
-    print("Base URL :", base_url)
-    print("Endpoint :", current_endpoint)
-    print("Full URL :", build_url(current_endpoint, base_url))
-    print("Method   :", method)
-    print("Expected :", expected)
-    print("Users    :", users)
-    print("Spawn    :", spawn_rate)
-    print("Run Time :", run_time)
-    print("=" * 70)
+    # Debug only.
+    # print("\n" + "=" * 70)
+    # print("LOCUST TARGET DEBUG")
+    # print("=" * 70)
+    # print("Base URL :", base_url)
+    # print("Endpoint :", current_endpoint)
+    # print("Full URL :", build_url(current_endpoint, base_url))
+    # print("Method   :", method)
+    # print("Expected :", expected)
+    # print("Users    :", users)
+    # print("Spawn    :", spawn_rate)
+    # print("Run Time :", run_time)
+    # print("=" * 70)
     command = [
         "locust",
         "-f",
@@ -771,16 +772,14 @@ class APIUser(HttpUser):
         errors="replace"
     )
 
-    print("\n--- LOCUST STDOUT ---")
-    print(process.stdout)
-
-    print("\n--- LOCUST STDERR ---")
-    print(process.stderr)
-
-    print(
-        "LOCUST EXIT CODE:",
-        process.returncode
-    )
+    # Debug only.
+    # print("\n--- LOCUST STDOUT ---")
+    # print(process.stdout)
+    #
+    # print("\n--- LOCUST STDERR ---")
+    # print(process.stderr)
+    #
+    # print("LOCUST EXIT CODE:", process.returncode)
 
     metrics = {}
     failure_details = []

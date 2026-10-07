@@ -25,6 +25,269 @@ def cast_value(value, target_type):
         pass
     return value
 
+def _field_leaf_name(field_path):
+    parts = [part for part in str(field_path).split('.') if not part.isdigit()]
+    return parts[-1].lower() if parts else str(field_path).lower()
+
+def _is_optional_identity_field(field_path, is_required, method_name):
+    return (
+        method_name == "POST" and
+        not is_required and
+        _field_leaf_name(field_path) in {'id', 'uuid'}
+    )
+
+def _path_prefixes(field_path):
+    parts = str(field_path).split('.')
+    return ['.'.join(parts[:index]) for index in range(1, len(parts))]
+
+def _has_optional_ancestor(field_path, field_configs):
+    for prefix in _path_prefixes(field_path):
+        config = field_configs.get(prefix)
+        if isinstance(config, dict) and not get_required_status(config):
+            return True
+    return False
+
+def _parse_test_input(input_value):
+    if isinstance(input_value, dict):
+        return input_value
+    if isinstance(input_value, str):
+        try:
+            parsed = json.loads(input_value)
+            return parsed if isinstance(parsed, dict) else None
+        except Exception:
+            return None
+    return None
+
+def _prune_configs_for_input(field_configs, input_value):
+    input_obj = _parse_test_input(input_value)
+    if input_obj is None or not isinstance(field_configs, dict):
+        return field_configs
+
+    flat_input = flatten(input_obj)
+    pruned = {}
+    for field, config in field_configs.items():
+        should_skip = False
+        for prefix in _path_prefixes(field):
+            parent_config = field_configs.get(prefix)
+            if (
+                isinstance(parent_config, dict) and
+                not get_required_status(parent_config) and
+                prefix not in flat_input
+            ):
+                should_skip = True
+                break
+        if not should_skip:
+            pruned[field] = config
+    return pruned
+
+def _sample_value_for_config(field_name, config):
+    if not isinstance(config, dict):
+        return "test"
+    if config.get('example') is not None:
+        return config.get('example')
+    if config.get('default') is not None:
+        return config.get('default')
+    enum_values = config.get('enum')
+    if isinstance(enum_values, list) and enum_values:
+        return enum_values[0]
+
+    field_type = str(config.get('type', 'string')).lower()
+    if field_type == 'email':
+        return 'user@example.com'
+    if field_type == 'uuid':
+        return '123e4567-e89b-12d3-a456-426614174000'
+    if field_type == 'date':
+        return '2026-01-01'
+    if field_type == 'datetime':
+        return '2026-01-01T00:00:00Z'
+    if field_type in ('integer', 'int32', 'int64'):
+        return 1
+    if field_type == 'number':
+        return 1.0
+    if field_type == 'boolean':
+        return True
+    if 'status' in str(field_name).lower():
+        return 'available'
+    return 'test'
+
+def _query_payload_from_configs(field_configs):
+    if not isinstance(field_configs, dict):
+        return {}
+    payload = {}
+    for field, config in field_configs.items():
+        if not isinstance(config, dict):
+            continue
+        if config.get('in') not in (None, '', 'query'):
+            continue
+        payload[field] = _sample_value_for_config(field, config)
+    return payload
+
+def _body_configs(field_configs):
+    if not isinstance(field_configs, dict):
+        return {}
+    return {
+        field: config
+        for field, config in field_configs.items()
+        if isinstance(config, dict) and config.get('in') in (None, '', 'body')
+    }
+
+def _path_configs(endpoint, field_configs):
+    names = re.findall(r'\{([^}]+)\}', endpoint or '')
+    configs = {}
+    for name in names:
+        config = field_configs.get(name, {}) if isinstance(field_configs, dict) else {}
+        configs[name] = config if isinstance(config, dict) else {}
+    return configs
+
+def _payload_from_body_configs(field_configs):
+    payload = {}
+    for field, config in _body_configs(field_configs).items():
+        field_type = str(config.get('type', 'string')).lower()
+        if field_type == 'object':
+            continue
+        payload = set_field(payload, field, _sample_value_for_config(field, config))
+    return payload
+
+def _ensure_put_identity_payload(payload):
+    if not isinstance(payload, dict):
+        return payload
+    updated = json.loads(json.dumps(payload))
+    if 'id' in updated and updated.get('id') in (None, '', 0, '0'):
+        updated['id'] = 10
+    if 'id' not in updated and any(key in updated for key in ('name', 'photoUrls', 'status', 'category', 'tags')):
+        updated['id'] = 10
+    if (
+        'id' in updated and
+        isinstance(updated.get('id'), int) and
+        {'name', 'photoUrls'}.issubset(set(updated.keys()))
+    ):
+        updated['id'] = 10
+    return updated
+
+def _invalid_enum_value(enum_values):
+    candidates = [
+        "invalid_category",
+        "INVALID_ENUM_VALUE",
+        "__not_allowed__",
+        999999,
+        False
+    ]
+    for candidate in candidates:
+        if candidate not in enum_values:
+            return candidate
+    return "__not_allowed__"
+
+def _yaml_negative_expected(openapi_responses, fallback="400 Bad Request"):
+    if not isinstance(openapi_responses, dict):
+        return fallback
+
+    preferred_codes = ['400', '422', '405', '409', '404']
+    response_keys = {str(key): value for key, value in openapi_responses.items()}
+    selected_code = next((code for code in preferred_codes if code in response_keys), None)
+
+    if selected_code is None:
+        selected_code = next(
+            (
+                code for code in response_keys
+                if re.match(r'^4\d{2}$', code) and code not in ('401', '403')
+            ),
+            None
+        )
+
+    if selected_code is None:
+        return fallback
+
+    response = response_keys.get(selected_code)
+    description = ''
+    if isinstance(response, dict):
+        description = str(response.get('description') or '').strip()
+    if description:
+        return f"{selected_code} {description}"
+    return selected_code
+
+def _success_expected(method_name):
+    return "200 OK / 201 Created" if str(method_name).upper() == "POST" else "200 OK"
+
+def _array_items_allow_null(config):
+    if not isinstance(config, dict):
+        return False
+
+    items = config.get('items')
+    if not isinstance(items, dict):
+        return False
+
+    item_type = items.get('type')
+    return (
+        items.get('nullable') is True or
+        item_type == 'null' or
+        (isinstance(item_type, list) and 'null' in item_type) or
+        (isinstance(items.get('enum'), list) and None in items.get('enum'))
+    )
+
+def _is_positive_case(test_case):
+    return 'positive' in str(test_case.get('type', '')).lower()
+
+def _normalize_success_expected_statuses(test_cases, method_name):
+    if str(method_name).upper() != "POST":
+        return test_cases
+
+    for test_case in test_cases:
+        if _is_positive_case(test_case):
+            test_case['expected'] = _success_expected(method_name)
+    return test_cases
+
+def _header_case(case_id, case_type, scenario, input_value, expected, request_headers=None, omit_headers=None):
+    test_case = {
+        "id": case_id,
+        "type": case_type,
+        "scenario": scenario,
+        "input": input_value,
+        "expected": expected
+    }
+    if request_headers:
+        test_case["request_headers"] = request_headers
+    if omit_headers:
+        test_case["omit_headers"] = omit_headers
+    return test_case
+
+def _sample_path_value(name, config, variant='valid'):
+    config = config if isinstance(config, dict) else {}
+    param_type = str(config.get('type', 'string')).lower()
+    if variant == 'invalid':
+        return 'abc' if param_type in ('integer', 'int32', 'int64', 'number') else '@#$%'
+    if variant == 'missing':
+        return ''
+    if variant == 'negative':
+        return '-1'
+    if variant == 'large':
+        return '99999999999999999999'
+    if variant == 'sql':
+        return "123' OR '1'='1"
+    if variant == 'xss':
+        return '<script>alert(1)</script>'
+    if variant == 'not_found':
+        return '999999'
+    if config.get('example') is not None:
+        return str(config.get('example'))
+    if config.get('default') is not None:
+        return str(config.get('default'))
+    if param_type in ('integer', 'int32', 'int64', 'number'):
+        return '123'
+    if param_type == 'uuid':
+        return '123e4567-e89b-12d3-a456-426614174000'
+    return 'sample'
+
+def _endpoint_with_path_variant(endpoint, path_configs, variant='valid'):
+    result = endpoint.rstrip('/')
+    for name, config in path_configs.items():
+        value = _sample_path_value(name, config, variant)
+        if value == '':
+            result = re.sub(rf'/\{{{re.escape(name)}\}}', '', result)
+            result = result.replace(f'{{{name}}}', '')
+        else:
+            result = result.replace(f'{{{name}}}', value)
+    return result or '/'
+
 class GenerateTestcases:
     def __init__(self):
         self.test_cases = []
@@ -39,28 +302,39 @@ class GenerateTestcases:
         field_name = data.get('field_name', '').strip()
         search_string = data.get('search_string', '')
         field_configs = data.get('field_configs', {})
+        openapi_responses = data.get('openapi_responses', {})
         base_url = data.get('baseUrl') or data.get('base_url') or ""
         param_type = data.get('param_type', 'query')
         
-        print(f"Base URL received for generation: {base_url}")
+        # Debug only.
+        # print(f"Base URL received for generation: {base_url}")
         
         if search_string and method.upper() in ['GET', 'DELETE']:
-            self.test_cases = self._generate_query_param_testcases(endpoint, search_string, field_name, method, param_type)
+            self.test_cases = self._generate_query_param_testcases(
+                endpoint,
+                search_string,
+                field_name,
+                method,
+                param_type,
+                field_configs
+            )
         else:
-            self.test_cases = self._generate_testcases_internal(method, endpoint, payload_json, field_configs)
+            self.test_cases = self._generate_testcases_internal(method, endpoint, payload_json, field_configs, openapi_responses)
+
+        self.test_cases = _normalize_success_expected_statuses(self.test_cases, method)
 
         # Ensure each test case has the baseUrl, endpoint, and method for persistence
         for tc in self.test_cases:
             tc['baseUrl'] = base_url
-            tc['endpoint'] = endpoint
+            tc['endpoint'] = tc.get('endpoint') or endpoint
             if 'method' not in tc:
                 tc['method'] = method
-            tc['field_configs'] = json.loads(
-                json.dumps(field_configs)
-            )
+            tc['field_configs'] = json.loads(json.dumps(
+                _prune_configs_for_input(field_configs, tc.get('input'))
+            ))
         return self.test_cases
     
-    def _generate_testcases_internal(self, method, endpoint, payload_json, field_configs={}):
+    def _generate_testcases_internal(self, method, endpoint, payload_json, field_configs={}, openapi_responses={}):
         try:
             payload = json.loads(payload_json) if payload_json else {}
         except:
@@ -72,9 +346,9 @@ class GenerateTestcases:
         if method.upper() == 'DELETE':
             testcases = self._generate_delete_testcases(endpoint, testcases, counter)
         elif method.upper() == 'POST':
-            testcases = self._generate_post_testcases(endpoint, testcases, counter, payload, field_configs, "POST")
+            testcases = self._generate_post_testcases(endpoint, testcases, counter, payload, field_configs, "POST", openapi_responses)
         elif method.upper() == 'PUT':
-            testcases = self._generate_put_testcases(endpoint, testcases, counter, payload, field_configs)
+            testcases = self._generate_put_testcases(endpoint, testcases, counter, payload, field_configs, openapi_responses)
         elif method.upper() == 'PATCH':
             testcases = self._generate_patch_testcases(endpoint, testcases, counter, payload, field_configs)
         elif method.upper() == 'GET':
@@ -103,7 +377,7 @@ class GenerateTestcases:
                 # Cast value to the type selected by user for realism
                 value = cast_value(value, field_type)
             
-            field_tests = generate_field_specific_tests(field, field_type, value, counter, method, required)
+            field_tests = generate_field_specific_tests(field, field_type, value, counter, method, required, config)
             for test in field_tests:
                 if isinstance(test.get('input'), dict):
                     # Merge field-specific input into full payload
@@ -401,12 +675,13 @@ class GenerateTestcases:
 
         return testcases
     
-    def _generate_payload_based_testcases(self, endpoint, testcases, counter, payload, field_configs={}, method_name="POST"):
+    def _generate_payload_based_testcases(self, endpoint, testcases, counter, payload, field_configs={}, method_name="POST", openapi_responses={}):
         tests = []
         test_counter = {"id": 1}
         
         verb = "Create" if method_name == "POST" else "Update"
-        success_code = "201 Created / 200 OK" if method_name == "POST" else "200 OK"
+        success_code = _success_expected(method_name)
+        negative_expected = _yaml_negative_expected(openapi_responses)
 
         if not payload:
             return [{
@@ -429,22 +704,39 @@ class GenerateTestcases:
         })
         test_counter['id'] += 1
         
-        # Determine required fields from config or assume all are required
-        required_fields = [f for f in fields_list if get_required_status(field_configs.get(f, {}))]
+        required_fields = [
+            f for f in fields_list
+            if (
+                get_required_status(field_configs.get(f, {})) and
+                not _has_optional_ancestor(f, field_configs)
+            )
+        ]
+        identity_support_fields = [
+            f for f in fields_list
+            if (
+                _is_optional_identity_field(
+                    f,
+                    get_required_status(field_configs.get(f, {})),
+                    method_name
+                ) and
+                not _has_optional_ancestor(f, field_configs)
+            )
+        ]
         
         if required_fields:
             partial_payload_obj = {}
-            for k in required_fields:
+            for k in required_fields + identity_support_fields:
                 val = flattened[k]
                 conf = field_configs.get(k, {})
                 if conf.get('type'):
                     val = cast_value(val, conf.get('type'))
                 partial_payload_obj = set_field(partial_payload_obj, k, val)
             
+            identity_suffix = " plus identity field" if identity_support_fields else ""
             tests.append({
                 "id": f"{method_name}_{test_counter['id']:02d}",
                 "type": "Positive",
-                "scenario": f"{verb} with required fields only",
+                "scenario": f"{verb} with required fields only{identity_suffix}",
                 "input": json.dumps(partial_payload_obj),
                 "expected": success_code
             })
@@ -459,6 +751,7 @@ class GenerateTestcases:
                 field_type = detect_field_type(field, value)
             else:
                 value = cast_value(value, field_type)
+            enum_values = config.get('enum')
             
             # Special handling for PATCH: missing fields are positive (partial update)
             if method_name == "PATCH":
@@ -470,7 +763,10 @@ class GenerateTestcases:
                     "expected": "200 OK"
                 })
             else:
-                if is_required:
+                is_server_managed_identity = _is_optional_identity_field(field, is_required, method_name)
+                if is_server_managed_identity:
+                    continue
+                elif is_required:
                     tests.append({
                         "id": f"{method_name}_{test_counter['id']:02d}",
                         "type": "Negative",
@@ -491,20 +787,20 @@ class GenerateTestcases:
             # Null value
             tests.append({
                 "id": f"{method_name}_{test_counter['id']:02d}",
-                "type": "Negative" if is_required or field_type not in ['string', 'email', 'url', 'password'] else "Positive",
+                "type": "Negative" if is_required or field_type not in ['string', 'email', 'url', 'password'] or (isinstance(enum_values, list) and enum_values) else "Positive",
                 "scenario": f"Null value for {field}",
                 "input": json.dumps(set_field(payload, field, None)),
-                "expected": "400 Bad Request" if is_required or field_type not in ['string', 'email', 'url', 'password'] else success_code
+                "expected": negative_expected if isinstance(enum_values, list) and enum_values else ("400 Bad Request" if is_required or field_type not in ['string', 'email', 'url', 'password'] else success_code)
             })
             test_counter['id'] += 1
             
             # Empty string
             tests.append({
                 "id": f"{method_name}_{test_counter['id']:02d}",
-                "type": "Negative" if is_required or field_type != 'string' else "Positive",
+                "type": "Negative" if is_required or field_type != 'string' or (isinstance(enum_values, list) and enum_values) else "Positive",
                 "scenario": f"Empty string for {field}",
                 "input": json.dumps(set_field(payload, field, "")),
-                "expected": "400 Bad Request" if is_required or field_type != 'string' else success_code
+                "expected": negative_expected if isinstance(enum_values, list) and enum_values else ("400 Bad Request" if is_required or field_type != 'string' else success_code)
             })
             test_counter['id'] += 1
             
@@ -514,9 +810,31 @@ class GenerateTestcases:
                 "type": "Negative",
                 "scenario": f"Type mismatch for {field} (Expected {field_type}, sent object)",
                 "input": json.dumps(set_field(payload, field, {"unexpected": "object"})),
-                "expected": "400 Bad Request"
+                "expected": negative_expected if isinstance(enum_values, list) and enum_values else "400 Bad Request"
             })
             test_counter['id'] += 1
+
+            if isinstance(enum_values, list) and enum_values:
+                enum_cases = [
+                    ("Positive", f"Allowed YAML enum value for {field}", enum_values[0], success_code),
+                    ("Negative", f"Value outside YAML enum list for {field}", _invalid_enum_value(enum_values), negative_expected),
+                    ("Negative", f"Whitespace only for {field}", "   ", negative_expected),
+                    ("Negative", f"Numeric string for {field}", "12345", negative_expected),
+                    ("Negative", f"String with special characters for {field}", "test!@#$%^&*()_+", negative_expected),
+                    ("Negative", f"Very long string for {field}", "s" * 5000, negative_expected),
+                    ("Security", f"SQL injection in {field}", "'; DROP TABLE; --", negative_expected),
+                    ("Security", f"XSS attempt in {field}", "<script>alert(1)</script>", negative_expected)
+                ]
+                for case_type, scenario, enum_value, expected in enum_cases:
+                    tests.append({
+                        "id": f"{method_name}_{test_counter['id']:02d}",
+                        "type": case_type,
+                        "scenario": scenario,
+                        "input": json.dumps(set_field(payload, field, enum_value)),
+                        "expected": expected
+                    })
+                    test_counter['id'] += 1
+                continue
 
             if field_type == 'boolean':
                 tests.append({
@@ -528,7 +846,7 @@ class GenerateTestcases:
                 })
                 test_counter['id'] += 1
             
-            field_tests = generate_field_specific_tests(field, field_type, value, test_counter, method_name, is_required)
+            field_tests = generate_field_specific_tests(field, field_type, value, test_counter, method_name, is_required, config)
             for t in field_tests:
                 if isinstance(t.get('input'), dict):
                     new_input = json.loads(json.dumps(payload))
@@ -585,25 +903,422 @@ class GenerateTestcases:
         
         # Standard Headers/Auth/RateLimit
         tests.extend([
-            {"id": f"{method_name}_{test_counter['id']:02d}", "type": "Header", "scenario": "Missing Content-Type header", "input": json.dumps(payload), "expected": "415 Unsupported Media Type"},
-            {"id": f"{method_name}_{test_counter['id']+1:02d}", "type": "Auth", "scenario": "Missing authorization token", "input": json.dumps(payload), "expected": "401 Unauthorized"},
-            {"id": f"{method_name}_{test_counter['id']+2:02d}", "type": "Auth", "scenario": "Invalid token", "input": json.dumps(payload), "expected": "401 Unauthorized"},
-            {"id": f"{method_name}_{test_counter['id']+3:02d}", "type": "RateLimit", "scenario": "Exceed rate limit", "input": json.dumps(payload), "expected": "429 Too Many Requests"},
-            {"id": f"{method_name}_{test_counter['id']+4:02d}", "type": "Performance", "scenario": "Normal load response time", "input": json.dumps(payload), "expected": "<300 ms latency"},
-            {"id": f"{method_name}_{test_counter['id']+5:02d}", "type": "Integration", "scenario": f"{verb} and verify record", "input": json.dumps(payload), "expected": success_code}
+            _header_case(f"{method_name}_{test_counter['id']:02d}", "Header", "Missing Content-Type header", json.dumps(payload), "415 Unsupported Media Type", omit_headers=["Content-Type"]),
+            _header_case(f"{method_name}_{test_counter['id']+1:02d}", "Header", "Invalid Content-Type header", json.dumps(payload), "415 Unsupported Media Type", request_headers={"Content-Type": "text/plain"}),
+            _header_case(f"{method_name}_{test_counter['id']+2:02d}", "Auth", "Missing authorization token", json.dumps(payload), "401 Unauthorized", omit_headers=["Authorization"]),
+            _header_case(f"{method_name}_{test_counter['id']+3:02d}", "Auth", "Invalid token", json.dumps(payload), "401 Unauthorized", request_headers={"Authorization": "Bearer invalid-token"}),
+            {"id": f"{method_name}_{test_counter['id']+4:02d}", "type": "RateLimit", "scenario": "Exceed rate limit", "input": json.dumps(payload), "expected": "429 Too Many Requests"},
+            {"id": f"{method_name}_{test_counter['id']+5:02d}", "type": "Performance", "scenario": "Normal load response time", "input": json.dumps(payload), "expected": "<300 ms latency"},
+            {"id": f"{method_name}_{test_counter['id']+6:02d}", "type": "Integration", "scenario": f"{verb} and verify record", "input": json.dumps(payload), "expected": success_code}
         ])
-        test_counter['id'] += 6
+        test_counter['id'] += 7
         
         return tests
     
-    def _generate_post_testcases(self, endpoint, testcases, counter, payload, field_configs={}, method_name="POST"):
-        return self._generate_payload_based_testcases(endpoint, testcases, counter, payload, field_configs, method_name)
+    def _generate_post_testcases(self, endpoint, testcases, counter, payload, field_configs={}, method_name="POST", openapi_responses={}):
+        return self._generate_payload_based_testcases(endpoint, testcases, counter, payload, field_configs, method_name, openapi_responses)
 
-    def _generate_put_testcases(self, endpoint, testcases, counter, payload=None, field_configs={}):
-        if payload:
-            return self._generate_payload_based_testcases(endpoint, testcases, counter, payload, field_configs, "PUT")
-        return [{"id": "PUT_01", "type": "Positive", "scenario": "Full resource update", "input": "Valid JSON", "expected": "200 OK"}]
-    
+    def _generate_put_testcases_static(self, endpoint, testcases, counter, payload=None, field_configs={}):
+        payload = payload if isinstance(payload, dict) else {}
+        payload_json = json.dumps(payload)
+        fields = flatten(payload)
+        field_names = list(fields)
+        email_field = next((field for field in field_names if field.lower().endswith('email')), 'email')
+        first_name_field = next((field for field in field_names if field.lower().endswith(('firstname', 'first_name'))), 'firstName')
+        phone_field = next((field for field in field_names if field.lower().endswith('phone')), 'phone')
+        id_value = '999999'
+        valid_id = '123'
+        path_endpoint = endpoint.rstrip('/')
+        if '{' in path_endpoint:
+            path_endpoint = re.sub(r'\{[^}]+\}', id_value, path_endpoint)
+        else:
+            path_endpoint = f"{path_endpoint}/{id_value}"
+        valid_path_endpoint = endpoint.rstrip('/')
+        if '{' in valid_path_endpoint:
+            valid_path_endpoint = re.sub(r'\{[^}]+\}', valid_id, valid_path_endpoint)
+        else:
+            valid_path_endpoint = f"{valid_path_endpoint}/{valid_id}"
+        invalid_path_endpoint = re.sub(r'\{[^}]+\}', 'abc', endpoint.rstrip('/')) if '{' in endpoint else f"{endpoint.rstrip('/')}/abc"
+        negative_path_endpoint = re.sub(r'\{[^}]+\}', '-1', endpoint.rstrip('/')) if '{' in endpoint else f"{endpoint.rstrip('/')}/-1"
+        missing_path_endpoint = re.sub(r'/\{[^}]+\}', '/', endpoint.rstrip('/')) if '{' in endpoint else f"{endpoint.rstrip('/')}/"
+
+        def field_value(field, fallback='test'):
+            return fields.get(field, fallback)
+
+        def with_field(field, value):
+            updated = json.loads(json.dumps(payload))
+            return json.dumps(set_field(updated, field, value))
+
+        def without_field(field):
+            return json.dumps(remove_field(payload, field))
+
+        single_field = {}
+        if field_names:
+            single_field = set_field({}, field_names[0], field_value(field_names[0]))
+
+        return [
+            {"id": "PUT-001", "type": "Positive", "scenario": "Valid PUT request", "input": f"PUT {valid_path_endpoint} with complete valid payload {payload_json}", "expected": "200 OK / 204 No Content; data updated"},
+            {"id": "PUT-002", "type": "Positive", "scenario": "Update single field", "input": json.dumps(single_field) if single_field else payload_json, "expected": "Behavior matches API contract; verify remaining fields"},
+            {"id": "PUT-003", "type": "Positive", "scenario": "Update all fields", "input": payload_json, "expected": "All fields updated correctly"},
+            {"id": "PUT-004", "type": "Negative", "scenario": "Non-existing resource", "input": f"PUT {path_endpoint}", "expected": "404 Not Found"},
+            {"id": "PUT-005", "type": "Negative", "scenario": "Invalid resource ID", "input": f"PUT {invalid_path_endpoint}", "expected": "400 Bad Request or contract-defined error"},
+            {"id": "PUT-006", "type": "Negative", "scenario": "Negative ID", "input": f"PUT {negative_path_endpoint}", "expected": "Validation error"},
+            {"id": "PUT-007", "type": "Negative", "scenario": "Missing path parameter", "input": f"PUT {missing_path_endpoint}", "expected": "400 Bad Request / 404 Not Found"},
+            {"id": "PUT-008", "type": "Validation", "scenario": "Empty payload", "input": "{}", "expected": "Validation error if fields are mandatory"},
+            {"id": "PUT-009", "type": "Validation", "scenario": "Null payload", "input": "null", "expected": "400 Bad Request"},
+            {"id": "PUT-010", "type": "Validation", "scenario": "Missing mandatory field", "input": without_field(email_field), "expected": "Validation error"},
+            {"id": "PUT-011", "type": "Validation", "scenario": "Null mandatory field", "input": with_field(email_field, None), "expected": "Validation error"},
+            {"id": "PUT-012", "type": "Validation", "scenario": "Empty mandatory field", "input": with_field(first_name_field, ""), "expected": "Validation error"},
+            {"id": "PUT-013", "type": "Validation", "scenario": "Invalid data type", "input": with_field(phone_field, 9876543210), "expected": "Validation error"},
+            {"id": "PUT-014", "type": "Validation", "scenario": "Invalid email", "input": with_field(email_field, "abc"), "expected": "Validation error"},
+            {"id": "PUT-015", "type": "Boundary", "scenario": "Boundary string length", "input": with_field(first_name_field, "x"), "expected": "Accepted/rejected according to specification"},
+            {"id": "PUT-016", "type": "Boundary", "scenario": "Exceed max length", "input": with_field(first_name_field, "x" * 1000), "expected": "400 Bad Request"},
+            {"id": "PUT-017", "type": "Validation", "scenario": "Special characters", "input": with_field(first_name_field, "@@@###"), "expected": "Accepted/rejected according to rules"},
+            {"id": "PUT-018", "type": "Validation", "scenario": "Unicode characters", "input": with_field(first_name_field, "José"), "expected": "Correctly handled"},
+            {"id": "PUT-019", "type": "Security", "scenario": "SQL injection string", "input": with_field(first_name_field, "' OR 1=1 --"), "expected": "Request rejected/safely handled"},
+            {"id": "PUT-020", "type": "Security", "scenario": "XSS payload", "input": with_field(first_name_field, "<script>alert(1)</script>"), "expected": "Safely handled/rejected"},
+            {"id": "PUT-021", "type": "Validation", "scenario": "Extra unknown field", "input": json.dumps({**payload, "admin": True}), "expected": "Ignored or rejected according to contract"},
+            {"id": "PUT-022", "type": "Header", "scenario": "Missing Content-Type", "input": payload_json, "expected": "400 Bad Request / 415 Unsupported Media Type"},
+            {"id": "PUT-023", "type": "Header", "scenario": "Wrong Content-Type", "input": "Content-Type: text/plain", "expected": "415 Unsupported Media Type"},
+            {"id": "PUT-024", "type": "Validation", "scenario": "Invalid JSON", "input": "{malformed json}", "expected": "400 Bad Request"},
+            {"id": "PUT-025", "type": "Security", "scenario": "Empty Authorization", "input": "PUT request with no Authorization token", "expected": "401 Unauthorized"},
+            {"id": "PUT-026", "type": "Security", "scenario": "Invalid token", "input": "PUT request with random or expired token", "expected": "401 Unauthorized"},
+            {"id": "PUT-027", "type": "Security", "scenario": "Insufficient permission", "input": "PUT request from read-only user", "expected": "403 Forbidden"},
+            {"id": "PUT-028", "type": "Security", "scenario": "Update another user's resource", "input": f"User A token + User B ID at {path_endpoint}", "expected": "403 or contract-defined behavior"},
+            {"id": "PUT-029", "type": "Validation", "scenario": "Duplicate email", "input": with_field(email_field, "existing@example.com"), "expected": "409 Conflict or validation error"},
+            {"id": "PUT-030", "type": "Positive", "scenario": "Same existing values", "input": payload_json, "expected": "Successful; no unintended changes"},
+            {"id": "PUT-031", "type": "Positive", "scenario": "Idempotency", "input": "Send the same PUT request twice", "expected": "Final state remains the same"},
+            {"id": "PUT-032", "type": "Integration", "scenario": "Verify persistence", "input": "PUT followed by GET", "expected": "GET returns updated values"},
+            {"id": "PUT-033", "type": "Integration", "scenario": "Verify database", "input": "PUT followed by database query", "expected": "Database contains expected values"},
+            {"id": "PUT-034", "type": "Integration", "scenario": "Response schema", "input": payload_json, "expected": "Response JSON matches OpenAPI/schema"},
+            {"id": "PUT-035", "type": "Header", "scenario": "Response headers", "input": payload_json, "expected": "Content-Type, correlation ID, and other headers match contract"},
+            {"id": "PUT-036", "type": "Performance", "scenario": "Response time", "input": payload_json, "expected": "Within SLA"},
+            {"id": "PUT-037", "type": "Concurrency", "scenario": "Concurrent updates", "input": "Two PUT requests simultaneously", "expected": "Defined conflict/versioning behavior"},
+            {"id": "PUT-038", "type": "Concurrency", "scenario": "Stale version", "input": "Old version or ETag", "expected": "409 Conflict / 412 Precondition Failed if optimistic locking is implemented"},
+            {"id": "PUT-039", "type": "Boundary", "scenario": "Large payload", "input": "Maximum allowed payload", "expected": "Correctly processed/rejected"},
+            {"id": "PUT-040", "type": "Negative", "scenario": "Unsupported HTTP method", "input": f"POST/PATCH/DELETE against {endpoint}", "expected": "Correct method handling"}
+        ]
+
+    def _generate_put_testcases(self, endpoint, testcases, counter, payload=None, field_configs={}, openapi_responses={}):
+        field_configs = field_configs or {}
+        payload = payload if isinstance(payload, dict) else {}
+        if not payload:
+            payload = _payload_from_body_configs(field_configs)
+        payload = _ensure_put_identity_payload(payload)
+
+        body_configs = _body_configs(field_configs)
+        fields = flatten(payload)
+        field_names = [
+            field for field in fields.keys()
+            if field in body_configs or not body_configs
+        ]
+        for field, config in body_configs.items():
+            if isinstance(config.get('enum'), list) and field not in field_names:
+                field_names.append(field)
+        path_configs = _path_configs(endpoint, field_configs)
+        valid_endpoint = (
+            _endpoint_with_path_variant(endpoint, path_configs, 'valid')
+            if path_configs else endpoint.rstrip('/')
+        )
+
+        tests = []
+        test_counter = {"id": 1}
+
+        def next_id():
+            case_id = f"PUT_{test_counter['id']:03d}"
+            test_counter['id'] += 1
+            return case_id
+
+        def add_case(case_type, scenario, input_value, expected, endpoint_override=None, metadata=None):
+            case = {
+                "id": next_id(),
+                "type": case_type,
+                "scenario": scenario,
+                "input": input_value,
+                "expected": expected,
+                "endpoint": endpoint_override or valid_endpoint,
+                "method": "PUT"
+            }
+            if metadata:
+                case["metadata"] = metadata
+            tests.append(case)
+
+        payload_json = json.dumps(payload)
+        negative_expected = _yaml_negative_expected(openapi_responses)
+        yaml_flow = {
+            "source": "uploaded_yaml",
+            "flow": [
+                "Read Swagger/YAML",
+                "Identify PUT endpoint",
+                "Read path parameters",
+                "Read request schema",
+                "Execute PUT",
+                "Validate status code",
+                "Validate response schema",
+                "GET resource",
+                "Verify updated values",
+                "Store result",
+                "Dashboard"
+            ],
+            "follow_up": {
+                "method": "GET",
+                "endpoint": valid_endpoint,
+                "assert_updated_values": payload
+            }
+        }
+
+        add_case(
+            "Positive",
+            "Valid PUT using YAML path parameters and request schema",
+            payload_json,
+            "200 OK / 204 No Content; response schema is valid and resource is updated",
+            metadata=yaml_flow
+        )
+
+        required_fields = [
+            field for field in field_names
+            if get_required_status(body_configs.get(field, {})) and not _has_optional_ancestor(field, body_configs)
+        ]
+        optional_fields = [
+            field for field in field_names
+            if field not in required_fields and not _has_optional_ancestor(field, body_configs)
+        ]
+
+        if required_fields:
+            required_payload = {}
+            for field in required_fields:
+                required_payload = set_field(
+                    required_payload,
+                    field,
+                    fields.get(field, _sample_value_for_config(field, body_configs.get(field, {})))
+                )
+            add_case(
+                "Validation",
+                "PUT with required YAML schema fields only",
+                json.dumps(required_payload),
+                "200 OK only if API allows partial replacement; otherwise 400 Bad Request"
+            )
+
+        if field_names:
+            first_field = field_names[0]
+            partial_payload = set_field({}, first_field, fields[first_field])
+            add_case(
+                "Validation",
+                f"PUT with single field only {first_field}",
+                json.dumps(partial_payload),
+                "400 Bad Request unless API explicitly supports partial PUT"
+            )
+
+        if path_configs:
+            path_cases = [
+                ("Negative", "PUT with non-existing path parameter", "not_found", "404 Not Found"),
+                ("Negative", "PUT with invalid path parameter format", "invalid", "400 Bad Request"),
+                ("Boundary", "PUT with negative path parameter", "negative", "400 Bad Request / 404 Not Found"),
+                ("Boundary", "PUT with extremely large path parameter", "large", "400 Bad Request / 422 Unprocessable Entity"),
+                ("Negative", "PUT with missing required path parameter", "missing", "400 Bad Request / 404 Not Found"),
+                ("Security", "PUT with SQL injection in path parameter", "sql", "400 Bad Request / 403 Forbidden"),
+                ("Security", "PUT with XSS in path parameter", "xss", "400 Bad Request / 403 Forbidden")
+            ]
+            for case_type, scenario, variant, expected in path_cases:
+                add_case(
+                    case_type,
+                    scenario,
+                    payload_json,
+                    expected,
+                    endpoint_override=_endpoint_with_path_variant(endpoint, path_configs, variant)
+                )
+
+        for field in required_fields:
+            add_case(
+                "Negative",
+                f"Missing required YAML request field {field}",
+                json.dumps(remove_field(payload, field)),
+                "400 Bad Request"
+            )
+            add_case(
+                "Negative",
+                f"Null required YAML request field {field}",
+                json.dumps(set_field(payload, field, None)),
+                "400 Bad Request"
+            )
+
+        for field in optional_fields[:3]:
+            add_case(
+                "Validation",
+                f"PUT without optional YAML request field {field}",
+                json.dumps(remove_field(payload, field)),
+                "200 OK only if omission preserves/replaces field according to API contract"
+            )
+
+        for field in field_names:
+            config = body_configs.get(field, {})
+            value = fields.get(field, _sample_value_for_config(field, config))
+            field_type = config.get('type') or detect_field_type(field, value)
+            is_required = get_required_status(config)
+            typed_value = cast_value(value, field_type)
+            enum_values = config.get('enum')
+
+            if isinstance(enum_values, list) and enum_values:
+                add_case(
+                    "Positive",
+                    f"PUT with allowed YAML enum value for {field}",
+                    json.dumps(set_field(payload, field, enum_values[0])),
+                    "200 OK / 204 No Content"
+                )
+                add_case(
+                    "Negative",
+                    f"PUT with {field} value outside YAML enum list",
+                    json.dumps(set_field(payload, field, _invalid_enum_value(enum_values))),
+                    negative_expected
+                )
+                add_case(
+                    "Negative",
+                    f"PUT with empty {field} outside YAML enum list",
+                    json.dumps(set_field(payload, field, "")),
+                    negative_expected
+                )
+                add_case(
+                    "Negative",
+                    f"PUT with numeric string {field} outside YAML enum list",
+                    json.dumps(set_field(payload, field, "12345")),
+                    negative_expected
+                )
+                add_case(
+                    "Negative",
+                    f"PUT with special characters in {field} outside YAML enum list",
+                    json.dumps(set_field(payload, field, "test!@#$%^&*()_+")),
+                    negative_expected
+                )
+                add_case(
+                    "Negative",
+                    f"PUT with long {field} value outside YAML enum list",
+                    json.dumps(set_field(payload, field, "x" * 1000)),
+                    negative_expected
+                )
+                add_case(
+                    "Negative",
+                    f"Type mismatch for YAML enum field {field}",
+                    json.dumps(set_field(payload, field, {"unexpected": "object"})),
+                    negative_expected
+                )
+                add_case(
+                    "Security",
+                    f"SQL injection in YAML enum field {field}",
+                    json.dumps(set_field(payload, field, "'; DROP TABLE users; --")),
+                    negative_expected
+                )
+                add_case(
+                    "Security",
+                    f"XSS payload in YAML enum field {field}",
+                    json.dumps(set_field(payload, field, "<script>alert(1)</script>")),
+                    negative_expected
+                )
+                continue
+
+            add_case(
+                "Negative",
+                f"Type mismatch for YAML request field {field}",
+                json.dumps(set_field(payload, field, {"unexpected": "object"})),
+                "400 Bad Request"
+            )
+
+            if field_type in ('string', 'email', 'url', 'password', 'phone', 'uuid', 'date', 'datetime'):
+                add_case(
+                    "Boundary" if not is_required else "Negative",
+                    f"Empty string boundary for YAML request field {field}",
+                    json.dumps(set_field(payload, field, "")),
+                    "400 Bad Request" if is_required else "200 OK / 400 Bad Request based on YAML contract"
+                )
+                if config.get('maxLength'):
+                    add_case(
+                        "Boundary",
+                        f"Max length boundary for YAML request field {field}",
+                        json.dumps(set_field(payload, field, "x" * int(config.get('maxLength')))),
+                        "200 OK / 204 No Content"
+                    )
+                    add_case(
+                        "Boundary",
+                        f"Exceeds max length for YAML request field {field}",
+                        json.dumps(set_field(payload, field, "x" * (int(config.get('maxLength')) + 1))),
+                        "400 Bad Request"
+                    )
+                if config.get('minLength'):
+                    add_case(
+                        "Boundary",
+                        f"Below min length for YAML request field {field}",
+                        json.dumps(set_field(payload, field, "x" * max(0, int(config.get('minLength')) - 1))),
+                        "400 Bad Request"
+                    )
+
+            if field_type in ('integer', 'number', 'int32', 'int64', 'float', 'double'):
+                if config.get('minimum') is not None:
+                    add_case(
+                        "Boundary",
+                        f"Minimum numeric boundary for YAML request field {field}",
+                        json.dumps(set_field(payload, field, config.get('minimum'))),
+                        "200 OK / 204 No Content"
+                    )
+                if config.get('maximum') is not None:
+                    add_case(
+                        "Boundary",
+                        f"Maximum numeric boundary for YAML request field {field}",
+                        json.dumps(set_field(payload, field, config.get('maximum'))),
+                        "200 OK / 204 No Content"
+                    )
+                add_case(
+                    "Negative",
+                    f"Out-of-range numeric value for YAML request field {field}",
+                    json.dumps(set_field(payload, field, 999999999999999999)),
+                    "400 Bad Request / 422 Unprocessable Entity"
+                )
+
+            field_tests = generate_field_specific_tests(field, field_type, typed_value, test_counter, "PUT", is_required, config)
+            for field_test in field_tests:
+                field_input = field_test.get('input')
+                if isinstance(field_input, dict):
+                    updated = json.loads(json.dumps(payload))
+                    for input_field, input_value in field_input.items():
+                        updated = set_field(updated, input_field, input_value)
+                    field_test['input'] = json.dumps(updated)
+                field_test['endpoint'] = valid_endpoint
+                field_test['method'] = "PUT"
+                tests.append(field_test)
+
+            add_case(
+                "Security",
+                f"SQL injection in YAML request field {field}",
+                json.dumps(set_field(payload, field, "'; DROP TABLE users; --")),
+                "400 Bad Request / 403 Forbidden"
+            )
+            add_case(
+                "Security",
+                f"XSS payload in YAML request field {field}",
+                json.dumps(set_field(payload, field, "<script>alert(1)</script>")),
+                "400 Bad Request / 403 Forbidden"
+            )
+
+        add_case("Negative", "Empty JSON body for PUT", "{}", "400 Bad Request")
+        add_case("Negative", "Malformed JSON body for PUT", "{invalid json}", "400 Bad Request")
+        add_case("Validation", "PUT with extra field not defined in YAML schema", json.dumps({**payload, "unknown_field": "unexpected"}), "400 Bad Request / ignored according to API contract")
+        add_case("Header", "PUT missing Content-Type header", payload_json, "415 Unsupported Media Type", metadata={"omit_headers": ["Content-Type"]})
+        add_case("Header", "PUT with invalid Content-Type header", payload_json, "415 Unsupported Media Type", metadata={"request_headers": {"Content-Type": "text/plain"}})
+        add_case("Security", "PUT missing authorization token", payload_json, "401 Unauthorized", metadata={"omit_headers": ["Authorization"]})
+        add_case("Security", "PUT with invalid authorization token", payload_json, "401 Unauthorized", metadata={"request_headers": {"Authorization": "Bearer invalid-token"}})
+        add_case("Security", "PUT with insufficient update permission", payload_json, "403 Forbidden")
+        add_case("RateLimit", "PUT rate limit exceeded", payload_json, "429 Too Many Requests")
+        add_case("Integration", "Validate PUT response schema from uploaded YAML", payload_json, "Response body matches YAML/OpenAPI response schema", metadata=yaml_flow)
+        add_case("Integration", "GET resource after PUT and verify updated values", payload_json, "GET returns updated values from PUT payload", metadata=yaml_flow)
+        add_case("Positive", "PUT idempotency with same YAML payload repeated", payload_json, "Final resource state remains unchanged after repeated PUT", metadata={**yaml_flow, "repeat_request": 2})
+        add_case("Performance", "PUT response time within SLA", payload_json, "Response time within configured SLA")
+
+        if not tests:
+            return self._generate_put_testcases_static(endpoint, testcases, counter, payload, field_configs)
+
+        for tc in tests:
+            tc.setdefault("field_configs", field_configs)
+
+        return tests
+
     def _generate_patch_testcases(self, endpoint, testcases, counter, payload=None, field_configs={}):
         if payload:
             return self._generate_payload_based_testcases(endpoint, testcases, counter, payload, field_configs, "PATCH")
@@ -627,9 +1342,11 @@ class GenerateTestcases:
         if path_params:
             self._add_get_path_params_tests(tests, test_counter, endpoint, path_params)
             
+        query_payload = payload or _query_payload_from_configs(field_configs)
+
         # 4. GET WITH Query Parameters
-        if payload:
-            self._add_get_query_params_tests(tests, test_counter, payload)
+        if query_payload:
+            self._add_get_query_params_tests(tests, test_counter, query_payload, field_configs)
             
         # 5. Authorization & Access Control
         self._add_auth_access_tests(tests, test_counter)
@@ -778,9 +1495,17 @@ class GenerateTestcases:
                 })
                 test_counter["id"] += 1
 
-    def _add_get_query_params_tests(self, tests, test_counter, payload):
+    def _add_get_query_params_tests(self, tests, test_counter, payload, field_configs={}):
         flattened = flatten(payload)
         fields_list = list(flattened.keys())
+        required_fields = [
+            field for field in fields_list
+            if get_required_status(field_configs.get(field, {}))
+        ]
+        optional_fields = [
+            field for field in fields_list
+            if not get_required_status(field_configs.get(field, {}))
+        ]
         
         # Functional
         tests.append({
@@ -802,14 +1527,41 @@ class GenerateTestcases:
             })
             test_counter['id'] += 1
 
-        tests.append({
-            "id": f"GET_QUERY_FUN_{test_counter['id']:02d}",
-            "type": "Functional",
-            "scenario": "Verify optional query parameters are truly optional",
-            "input": "Omit some parameters",
-            "expected": "200 OK, results returned ignoring omitted fields"
-        })
-        test_counter['id'] += 1
+        if required_fields:
+            required_field = required_fields[0]
+            included_fields = [
+                field for field in fields_list
+                if field != required_field
+            ]
+            missing_required_input = "&".join(
+                [f"{field}={flattened[field]}" for field in included_fields]
+            )
+            tests.append({
+                "id": f"GET_QUERY_NEG_{test_counter['id']:02d}",
+                "type": "Negative",
+                "scenario": f"Missing required query parameter {required_field}",
+                "input": missing_required_input or "Omit required query parameter",
+                "expected": "400 Bad Request"
+            })
+            test_counter['id'] += 1
+
+        if optional_fields:
+            optional_field = optional_fields[0]
+            included_fields = [
+                field for field in fields_list
+                if field != optional_field
+            ]
+            optional_input = "&".join(
+                [f"{field}={flattened[field]}" for field in included_fields]
+            )
+            tests.append({
+                "id": f"GET_QUERY_FUN_{test_counter['id']:02d}",
+                "type": "Functional",
+                "scenario": f"Verify optional query parameter {optional_field} is truly optional",
+                "input": optional_input or "Omit optional query parameter",
+                "expected": "200 OK, results returned ignoring omitted fields"
+            })
+            test_counter['id'] += 1
 
         # Pagination
         pagination_cases = [
@@ -991,7 +1743,7 @@ class GenerateTestcases:
             "expected": "Success response"
         }]
     
-    def _generate_query_param_testcases(self, endpoint, search_string, field_name="", method="GET", param_type="query"):
+    def _generate_query_param_testcases(self, endpoint, search_string, field_name="", method="GET", param_type="query", field_configs={}):
         tests = []
         
         # Determine param_name based on parameter type and user input
@@ -1006,6 +1758,8 @@ class GenerateTestcases:
                 param_name = ""
             
         param_values = self._extract_param_values(search_string)
+        param_config = field_configs.get(param_name, {}) if param_name else {}
+        is_required_param = get_required_status(param_config)
         
         test_counter = {"id": 1}
         method_upper = method.upper()
@@ -1194,15 +1948,25 @@ class GenerateTestcases:
             })
             test_counter["id"] += 1
 
-        # Functional - Optional & Defaults
-        tests.append({
-            "id": f"{method_prefix}_FUN_{test_counter['id']:02d}",
-            "type": "Functional",
-            "scenario": f"Verify optional {param_name} parameter is truly optional",
-            "input": endpoint,
-            "expected": expected_response
-        })
-        test_counter["id"] += 1
+        if is_required_param:
+            tests.append({
+                "id": f"{method_prefix}_NEG_{test_counter['id']:02d}",
+                "type": "Negative",
+                "scenario": f"Missing required query parameter {param_name}",
+                "input": endpoint,
+                "expected": "400 Bad Request"
+            })
+            test_counter["id"] += 1
+        else:
+            # Functional - Optional & Defaults
+            tests.append({
+                "id": f"{method_prefix}_FUN_{test_counter['id']:02d}",
+                "type": "Functional",
+                "scenario": f"Verify optional {param_name} parameter is truly optional",
+                "input": endpoint,
+                "expected": expected_response
+            })
+            test_counter["id"] += 1
 
         # 2. Pagination
         pagination_cases = [
@@ -1253,10 +2017,10 @@ class GenerateTestcases:
         # 4. Filtering
         val_to_use = param_values[0] if param_values else ('available' if not search_string else search_string)
         filtering_cases = [
-            ("Verify case sensitivity handling", f"{param_name if param_name else 'status'}={val_to_use.upper()}", "200 OK (if case-insensitive)"),
-            ("Verify partial match behavior", f"{param_name if param_name else 'status'}={val_to_use[:3] if len(val_to_use)>3 else 'ava'}", "200 OK (if partial match supported)")
+            ("Negative", "Verify case sensitivity handling", f"{param_name if param_name else 'status'}={val_to_use.upper()}", "400 Bad Request"),
+            ("Negative", "Verify partial match behavior", f"{param_name if param_name else 'status'}={val_to_use[:3] if len(val_to_use)>3 else 'ava'}", "400 Bad Request (partial match not supported)")
         ]
-        for scenario, inp_param, exp in filtering_cases:
+        for case_type, scenario, inp_param, exp in filtering_cases:
             if not param_name:
                 base_endpoint = endpoint.rstrip('/')
                 inp = f"{base_endpoint}/{val_to_use}?{inp_param}"
@@ -1264,7 +2028,7 @@ class GenerateTestcases:
                 inp = f"?{inp_param}"
             tests.append({
                 "id": f"{method_prefix}_FLT_{test_counter['id']:02d}",
-                "type": "Functional",
+                "type": case_type,
                 "scenario": scenario,
                 "input": inp,
                 "expected": exp
@@ -1519,8 +2283,10 @@ def generate_nested_array_tests(field_name, array_value, counter, method):
     
     return tests
 
-def generate_field_specific_tests(field_name, field_type, value, counter, method, required=False):
+def generate_field_specific_tests(field_name, field_type, value, counter, method, required=False, config=None):
     tests = []
+    success_code = _success_expected(method)
+    config = config if isinstance(config, dict) else {}
     
     field_id = field_name.replace('.', '_')
 
@@ -1612,7 +2378,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Positive",
             "scenario": f"Valid integer for {field_name}",
             "input": {field_name: 100},
-            "expected": "200 OK / 201 Created"
+            "expected": success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1620,7 +2386,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Validation" if required else "Positive",
             "scenario": f"Zero value for {field_name}",
             "input": {field_name: 0},
-            "expected": "400 Invalid value or 200 OK" if required else "200 OK"
+            "expected": "400 Invalid value or 200 OK" if required else success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1672,7 +2438,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Positive",
             "scenario": f"Valid string for {field_name}",
             "input": {field_name: "valid_string_value"},
-            "expected": "200 OK / 201 Created"
+            "expected": success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1680,7 +2446,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Validation" if required else "Positive",
             "scenario": f"Empty string for {field_name}",
             "input": {field_name: ""},
-            "expected": "400 Invalid value or 200 OK" if required else "200 OK"
+            "expected": "400 Invalid value or 200 OK" if required else success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1688,7 +2454,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Validation" if required else "Positive",
             "scenario": f"Whitespace only for {field_name}",
             "input": {field_name: "   "},
-            "expected": "400 Invalid value - whitespace only" if required else "200 OK"
+            "expected": "400 Invalid value - whitespace only" if required else success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1696,7 +2462,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Positive",
             "scenario": f"Numeric string for {field_name}",
             "input": {field_name: "12345"},
-            "expected": "200 OK"
+            "expected": success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1704,7 +2470,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Positive",
             "scenario": f"String with special characters for {field_name}",
             "input": {field_name: "test!@#$%^&*()_+"},
-            "expected": "200 OK"
+            "expected": success_code
         })
         counter['id'] += 1
         tests.append({
@@ -1721,7 +2487,7 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
             "type": "Validation" if required else "Positive",
             "scenario": f"Minimum length boundary for {field_name}",
             "input": {field_name: "a"},
-            "expected": f"400 Too short (min: {min_length})" if required else "200 OK"
+            "expected": f"400 Too short (min: {min_length})" if required else success_code
         })
         counter['id'] += 1
         
@@ -1772,12 +2538,14 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
         counter['id'] += 1
         
     elif field_type == 'array':
+        multiple_items_is_invalid = _field_leaf_name(field_name) == 'tags'
+        null_items_are_invalid = not _array_items_allow_null(config)
         tests.append({
             "id": f"{method}_VAL_{counter['id']:03d}",
-            "type": "Positive",
+            "type": "Validation" if multiple_items_is_invalid else "Positive",
             "scenario": f"Multiple items in array for {field_name}",
             "input": {field_name: [value[0] if isinstance(value, list) and value else "item1", "item2"]},
-            "expected": "200 OK"
+            "expected": "400 Bad Request" if multiple_items_is_invalid else "200 OK"
         })
         counter['id'] += 1
         tests.append({
@@ -1790,10 +2558,10 @@ def generate_field_specific_tests(field_name, field_type, value, counter, method
         counter['id'] += 1
         tests.append({
             "id": f"{method}_VAL_{counter['id']:03d}",
-            "type": "Validation" if required else "Positive",
+            "type": "Validation" if null_items_are_invalid else "Positive",
             "scenario": f"Null element in array {field_name}",
             "input": {field_name: [None]},
-            "expected": "400 Array contains null elements" if required else "200 Success / 400 Invalid"
+            "expected": "400 Array contains null elements" if null_items_are_invalid else success_code
         })
         counter['id'] += 1
         
@@ -1894,20 +2662,34 @@ def set_field(data, field_path, value):
     new_data = json.loads(json.dumps(data))
     keys = field_path.split(".")
     d = new_data
-    for k in keys[:-1]:
+    for index, k in enumerate(keys[:-1]):
+        next_key = keys[index + 1]
         if isinstance(d, dict):
-            d = d.get(k, {})
+            if k not in d or d[k] is None:
+                d[k] = [] if next_key.isdigit() else {}
+            d = d[k]
         elif isinstance(d, list):
-            d = d[int(k)]
+            try:
+                item_index = int(k)
+            except (TypeError, ValueError):
+                return new_data
+            while len(d) <= item_index:
+                d.append({} if not next_key.isdigit() else [])
+            if d[item_index] is None:
+                d[item_index] = [] if next_key.isdigit() else {}
+            d = d[item_index]
         else:
             return new_data
     if isinstance(d, dict):
         d[keys[-1]] = value
     elif isinstance(d, list):
         try:
-            d[int(keys[-1])] = value
-        except:
-            pass
+            item_index = int(keys[-1])
+            while len(d) <= item_index:
+                d.append(None)
+            d[item_index] = value
+        except (TypeError, ValueError):
+            return new_data
     return new_data
 
 # Backward-compatible alias for PEP 8 rename

@@ -4,3 +4,4 @@ openpyxl
 pyodbc>=4.0.39
 requests
 locust==2.46.4
+PyYAML

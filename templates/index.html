@@ -33,12 +33,12 @@
             --light: #f9fafb;
             --gray: #6b7280;
             --border: #e5e7eb;
-            --sidebar-width: 280px;
+            --sidebar-width: 290px;
         }
 
         body {
             font-family: 'Inter', -apple-system, sans-serif;
-            background-color: #f3f4f6;
+            background: #f4f7fb;
             color: var(--dark);
             min-height: 100vh;
             display: flex;
@@ -56,7 +56,7 @@
             overflow-x: hidden;
             left: 0;
             top: 0;
-            padding: 30px 20px;
+            padding: 18px 14px;
             display: flex;
             flex-direction: column;
             z-index: 100;
@@ -69,19 +69,35 @@
             font-size: 1.25em;
             font-weight: 700;
             color: var(--primary);
-            margin-bottom: 40px;
+            padding: 0 8px;
+            margin-bottom: 28px;
         }
+
+        .logo-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border-radius: 12px;
+            color: #fff;
+            background: linear-gradient(145deg, #6366f1, #4338ca);
+            box-shadow: 0 8px 16px rgba(79, 70, 229, .24);
+            flex-shrink: 0;
+        }
+
+        .logo-copy { display: grid; gap: 2px; }
+        .logo-copy small { color: #8190b1; font-size: .68rem; font-weight: 500; }
 
         .nav-item {
             display: flex;
             align-items: center;
             gap: 12px;
             padding: 12px 16px;
-            border-radius: 12px;
+            border-radius: 10px;
             color: var(--gray);
             text-decoration: none;
             transition: all 0.2s;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             font-weight: 500;
         }
 
@@ -96,16 +112,16 @@
         }
 
         .nav-item.active-parent {
-            background: #f8fafc;
-            color: var(--dark);
+            background: #eeedff;
+            color: var(--primary-dark);
             font-weight: 600;
         }
 
         .nav-sub-items {
             display: flex;
             flex-direction: column;
-            margin-left: 22px;
-            border-left: 2px solid var(--border);
+            margin-left: 20px;
+            border-left: 1px solid #dbe2f0;
             padding-left: 10px;
             margin-bottom: 12px;
             margin-top: 4px;
@@ -121,7 +137,7 @@
         .main-content {
             margin-left: var(--sidebar-width);
             flex: 1;
-            padding: 40px;
+            padding: 0 30px 48px;
             min-width: 0;
             overflow-x: hidden;
             width: calc(100% - var(--sidebar-width));
@@ -131,7 +147,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 22px;
         }
 
         .dashboard-header h1 {
@@ -142,14 +158,218 @@
 
         .card {
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(30, 41, 59, 0.06);
             padding: 24px;
             margin-bottom: 24px;
             width: 100%;
             max-width: 100%;
             overflow: hidden;
             border: 1px solid var(--border);
+        }
+
+        .app-topbar {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            gap: 34px;
+            margin: 0 -30px 20px;
+            padding: 0 20px;
+            background: rgba(255, 255, 255, .94);
+            border-bottom: 1px solid #e4eaf4;
+        }
+
+        .topbar-menu {
+            border: 0;
+            background: transparent;
+            color: #34415f;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .topbar-title { display: grid; gap: 3px; }
+        .topbar-title strong { color: #172554; font-size: 1.18rem; line-height: 1.1; }
+        .topbar-title span { color: #60749b; font-size: .88rem; line-height: 1.1; }
+        .topbar-spacer { flex: 1; }
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 13px;
+            color: #159669;
+            background: #ecfdf5;
+            border-radius: 999px;
+            font-size: .76rem;
+            font-weight: 700;
+        }
+        .status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #34d399; }
+        .profile-chip { display: flex; align-items: center; gap: 9px; color: #243252; font-size: .78rem; font-weight: 700; }
+        .profile-avatar { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #4f46e5; }
+
+        body.sidebar-collapsed .sidebar { width: 76px; padding-left: 10px; padding-right: 10px; }
+        body.sidebar-collapsed .main-content { margin-left: 76px; width: calc(100% - 76px); }
+        body.sidebar-collapsed .logo { justify-content: center; padding: 0; }
+        body.sidebar-collapsed .logo-copy,
+        body.sidebar-collapsed .nav-item { font-size: 0; }
+        body.sidebar-collapsed .nav-item { justify-content: center; padding-left: 8px; padding-right: 8px; }
+        body.sidebar-collapsed .nav-sub-items { margin-left: 0; padding-left: 0; border-left: 0; }
+
+        #test-plan-config-view .dashboard-header {
+            align-items: flex-start;
+            margin-bottom: 18px;
+        }
+        #test-plan-config-view .dashboard-header h1 { font-size: 1.35rem; color: #172554; }
+        #test-plan-config-view .dashboard-header p { font-size: .78rem; margin-top: 3px; }
+        #test-plan-config-view .summary-grid { display: none; }
+        #test-plan-config-view .config-reference-card {
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 0;
+            overflow: hidden;
+            border-color: #e0e7f3;
+            box-shadow: 0 8px 26px rgba(42, 65, 108, .08);
+        }
+        #test-plan-config-view .config-reference-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 14px 20px;
+            border-bottom: 1px solid #edf1f7;
+        }
+        #test-plan-config-view .config-reference-title { display: flex; align-items: center; gap: 12px; }
+        #test-plan-config-view .config-reference-icon {
+            width: 44px;
+            height: 44px;
+            display: grid;
+            place-items: center;
+            border-radius: 14px;
+            color: #fff;
+            background: linear-gradient(145deg, #6366f1, #4f46e5);
+            box-shadow: 0 7px 16px rgba(79, 70, 229, .2);
+        }
+        #test-plan-config-view .config-reference-title h2 { color: #172554; font-size: 1.18rem; }
+        #test-plan-config-view .config-reference-title p { color: #7c8ba8; font-size: .76rem; margin-top: 3px; }
+        #test-plan-config-view .method-summary {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 190px;
+            padding: 9px 13px;
+            border: 1px solid #e1e6f4;
+            border-radius: 10px;
+            background: #f8f9ff;
+        }
+        #test-plan-config-view .method-summary strong { color: var(--primary-dark); font-size: .84rem; }
+        #test-plan-config-view .method-summary span { display: block; color: #7e8bab; font-size: .7rem; margin-top: 2px; }
+        #test-plan-config-view .method-badge { padding: 6px 9px; color: #fff; background: #10b981; border-radius: 7px; font-size: .7rem; font-weight: 800; }
+        #test-plan-config-view .config-reference-body { padding: 16px 20px 18px; }
+        #test-plan-config-view #config-grid { gap: 18px !important; }
+        #test-plan-config-view #config-grid > .card { padding: 0; }
+        #test-plan-config-view #config-grid > .card:nth-child(2) { display: none; }
+        #test-plan-config-view .card-title {
+            padding-bottom: 16px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid #edf1f7;
+            font-size: 1.05rem;
+            color: #172554;
+        }
+        #test-plan-config-view .card-title i { color: var(--primary); }
+        #test-plan-config-view label { color: #304263; font-size: .77rem; margin-bottom: 7px; }
+        #test-plan-config-view .field-label-icon {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+            vertical-align: -3px;
+            color: #35517e;
+            stroke-width: 2.2;
+        }
+        #test-plan-config-view input,
+        #test-plan-config-view textarea,
+        #test-plan-config-view .select-selected { border-radius: 8px; border-color: #d9e2f0; padding: 10px 13px; font-size: .84rem; }
+        #test-plan-config-view .form-group { margin-bottom: 15px; }
+        #test-plan-config-view #payload { min-height: 112px; color: #e8efff; background: #17233c; border-color: #17233c; line-height: 1.55; }
+        #test-plan-config-view #payload::placeholder { color: #9aa9c8; }
+        #test-plan-config-view #payload:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(99,102,241,.14); }
+        #test-plan-config-view #performance-config-section { padding: 12px !important; border-radius: 9px !important; }
+        #test-plan-config-view form > div:last-child { padding-top: 4px; border-top: 1px solid #edf1f7; }
+        #test-plan-config-view form > div:last-child .btn-primary { background: linear-gradient(100deg, #5146e5, #4338ca); }
+        #test-plan-config-view .reference-actionbar {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-top: 4px;
+            padding: 10px 4px 0;
+            border-top: 1px solid #edf1f7;
+        }
+        #test-plan-config-view .reference-actionbar .btn { border-radius: 9px; padding: 10px 15px; font-size: .78rem; }
+        #test-plan-config-view .reference-actionbar .btn-primary { margin-left: auto; min-width: 220px; }
+        #test-plan-config-view .reference-action-meta { color: #8290aa; font-size: .73rem; display: flex; align-items: center; gap: 6px; }
+
+        .template-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 18px 22px;
+            background: linear-gradient(110deg, #eef2ff, #f8fafc 58%, #ecfeff);
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            margin-bottom: 22px;
+        }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .template-card {
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 18px;
+            background: #fff;
+            transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+        }
+
+        .template-card:hover {
+            border-color: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(79, 70, 229, .1);
+        }
+
+        .template-card-meta {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 12px 0 16px;
+        }
+
+        .template-chip {
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #475569;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 760px) {
+            .sidebar { width: 76px; padding: 24px 10px; }
+            .sidebar .logo span { display: none; }
+            .sidebar .nav-item { justify-content: center; padding: 12px 8px; font-size: 0; }
+            .nav-sub-items { margin-left: 0; padding-left: 0; border-left: 0; }
+            .main-content { margin-left: 76px; width: calc(100% - 76px); padding: 0 16px 36px; }
+            .app-topbar { margin: 0 -16px 18px; padding: 0 14px; }
+            .form-grid { grid-template-columns: 1fr; gap: 0; }
+            .template-toolbar { align-items: flex-start; flex-direction: column; }
+            #test-plan-config-view .config-reference-head { align-items: flex-start; flex-direction: column; }
+            #test-plan-config-view .method-summary { width: 100%; }
+            #test-plan-config-view .config-reference-body { padding: 14px; }
+            #test-plan-config-view .reference-actionbar { align-items: stretch; flex-wrap: wrap; gap: 8px; }
+            #test-plan-config-view .reference-actionbar .btn-primary { margin-left: 0; width: 100%; }
+            #apiForm > div:last-child { flex-wrap: wrap; }
+            #apiForm > div:last-child .btn { flex: 1 1 140px !important; }
         }
 
         .card-title {
@@ -708,11 +928,19 @@
             padding: 12px 16px;
             margin-bottom: 12px;
             display: flex;
-            align-items: center;
-            gap: 12px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0;
             transition: all 0.2s ease;
             cursor: pointer;
             user-select: none;
+        }
+
+        .test-case-main-row {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 12px;
         }
 
         .test-case-card:hover {
@@ -969,6 +1197,103 @@
             direction: ltr !important;
         }
 
+        .inline-execution-result {
+            display: none;
+            margin: 12px 0 0 52px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #f8fafc;
+            overflow: hidden;
+            width: calc(100% - 52px);
+            box-sizing: border-box;
+        }
+
+        .inline-execution-result.visible {
+            display: block;
+        }
+
+        .inline-result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: white;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inline-result-title {
+            flex: 1;
+            min-width: 0;
+            color: var(--dark);
+            font-size: .82rem;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .inline-result-toggle {
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--primary);
+            border-radius: 7px;
+            padding: 6px 9px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+
+        .inline-result-body {
+            padding: 12px;
+        }
+
+        .inline-result-body.collapsed {
+            display: none;
+        }
+
+        .inline-response-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 12px 0 6px;
+        }
+
+        .inline-response-title {
+            color: var(--dark);
+            font-size: .78rem;
+            font-weight: 700;
+        }
+
+        .inline-copy-button {
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--dark);
+            border-radius: 7px;
+            padding: 5px 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: .72rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .inline-copy-button:hover {
+            border-color: var(--primary-light);
+            color: var(--primary);
+            background: #eef2ff;
+        }
+
+        .inline-response-payload {
+            max-height: 260px;
+            margin-top: 0;
+        }
+
         /* Modal Styles */
         .modal {
             position: fixed;
@@ -1167,22 +1492,39 @@
 <body>
     <div class="sidebar">
         <div class="logo">
-            <i data-lucide="shield-check" style="width: 32px; height: 32px;"></i>
-            <span>API TestProbe</span>
+            <div class="logo-mark"><i data-lucide="shield-check" style="width: 22px; height: 22px;"></i></div>
+            <div class="logo-copy">
+                <span>API TestProbe</span>
+                <small>No-Code API Test Case Generator</small>
+            </div>
         </div>
         <nav>
             <div class="nav-group">
-                <a href="javascript:void(0)" class="nav-item active active-parent" id="nav-dashboard"
+                <a href="javascript:void(0)" class="nav-item active" id="nav-dashboard"
                     onclick="navigateTo('dashboard-main-view', 'nav-dashboard')">
                     <i data-lucide="layout-dashboard"></i> Dashboard
                 </a>
                 <div class="nav-sub-items">
-                    <a href="javascript:void(0)" class="nav-item sub-item" id="nav-test-plan"
-                        onclick="navigateTo('test-plan-api-selection', 'nav-test-plan')">
-                        <i data-lucide="file-edit"></i> Test Plan
+                    <a href="javascript:void(0)" class="nav-item" id="nav-test-plan"
+                        onclick="navigateTo('test-plan-config-view', 'nav-test-plan')">
+                        <i data-lucide="file-edit"></i> Test Plan <i data-lucide="chevron-down" style="width: 15px; margin-left: auto;"></i>
                     </a>
 
-                    <div id="dynamic-domain-nav" style="margin-top: 2px; margin-bottom: 8px;"></div>
+                    <div id="dynamic-domain-nav" style="margin-top: 2px; margin-bottom: 8px;">
+                        <a href="javascript:void(0)" class="nav-item sub-item" onclick="navigateTo('test-plan-config-view', 'nav-test-plan')">
+                            <i data-lucide="wand-sparkles"></i> Generate Test Cases
+                        </a>
+                        <a href="javascript:void(0)" class="nav-item sub-item" onclick="navigateTo('test-lab-view', 'nav-test-lab')">
+                            <i data-lucide="database"></i> Manage Test Cases
+                        </a>
+                        <a href="javascript:void(0)" class="nav-item sub-item" onclick="navigateTo('test-lab-view', 'nav-test-lab')">
+                            <i data-lucide="list-checks"></i> Test Scenarios
+                        </a>
+                        <a href="javascript:void(0)" class="nav-item sub-item" onclick="navigateTo('templates-view', 'nav-templates')">
+                            <i data-lucide="file-spreadsheet"></i> Excel Templates
+                        </a>
+                        <div id="dynamic-pool-nav"></div>
+                    </div>
 
                     <a href="javascript:void(0)" class="nav-item sub-item" id="nav-test-lab"
                         onclick="navigateTo('test-lab-view', 'nav-test-lab')">
@@ -1191,10 +1533,6 @@
                 </div>
             </div>
 
-            <a href="javascript:void(0)" class="nav-item" id="nav-templates"
-                onclick="navigateTo('templates-view', 'nav-templates')">
-                <i data-lucide="file-spreadsheet"></i> Excel Templates
-            </a>
             <a href="javascript:void(0)" class="nav-item" id="nav-history"
                 onclick="navigateTo('history-view', 'nav-history')">
                 <i data-lucide="history"></i> Run History
@@ -1211,6 +1549,16 @@
     </div>
 
     <div class="main-content">
+
+        <header class="app-topbar">
+            <button class="topbar-menu" type="button" aria-label="Toggle navigation">
+                <i data-lucide="menu" style="width: 25px; height: 25px;"></i>
+            </button>
+            <div class="topbar-title">
+                <strong>Generate API Test Cases</strong>
+                <span>Configure your API request and generate comprehensive test cases</span>
+            </div>
+        </header>
 
         <div id="toast-container" class="toast-container"></div>
         <div id="performanceConfigModal" class="modal" style="display: none;">
@@ -1381,6 +1729,30 @@
             </div>
         </div>
 
+        <div id="saveTemplateModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i data-lucide="bookmark-plus" style="width: 20px; height: 20px; margin-right: 8px;"></i> Save Request Template</h3>
+                    <button class="modal-close" onclick="hideSaveTemplateModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="templateName">Template name</label>
+                        <input id="templateName" type="text" maxlength="120" placeholder="e.g. Update active user">
+                    </div>
+                    <div class="form-group">
+                        <label for="templateDescription">Description <span style="color: var(--gray); font-weight: 400;">(optional)</span></label>
+                        <input id="templateDescription" type="text" maxlength="240" placeholder="What is this request used for?">
+                    </div>
+                    <p style="color: var(--gray); font-size: .82rem;">This saves the current environment, method, endpoint, payload, parameters, and field rules.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" onclick="hideSaveTemplateModal()" style="border: 1px solid var(--border); background: white; color: var(--dark);">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveCurrentTemplate()"><i data-lucide="save"></i> Save Template</button>
+                </div>
+            </div>
+        </div>
+
         <div id="databaseModal" class="modal" style="display: none;">
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
@@ -1514,7 +1886,7 @@
             </div>
         </div>
 
-        <div id="dashboard-main-view" class="view-section">
+        <div id="dashboard-main-view" class="view-section" style="display: block;">
             <div class="dashboard-header">
                 <div>
                     <h1>API Test Command Center</h1>
@@ -1605,9 +1977,8 @@
         <div id="test-plan-config-view" class="view-section" style="display: none;">
             <div class="dashboard-header">
                 <div>
-                    <h1>REST Test Plan Builder</h1>
-                    <p style="color: var(--gray);">Configure endpoints, analyze payloads, and auto-generate scenarios
-                    </p>
+                    <h1>Configure API</h1>
+                    <p style="color: var(--gray);">Configure your API request</p>
                 </div>
                 <div style="display: flex; gap: 12px;">
                     <button class="btn" onclick="navigateTo('test-plan-api-selection', 'nav-test-plan')"
@@ -1631,13 +2002,28 @@
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr; width: 100%; gap: 30px;" id="config-grid">
-                <div class="card">
-                    <div class="card-title"><i data-lucide="sliders"></i> Configuration</div>
+                <div class="card config-reference-card">
+                    <div class="config-reference-head">
+                        <div class="config-reference-title">
+                            <div class="config-reference-icon"><i data-lucide="wand-sparkles" style="width: 23px;"></i></div>
+                            <div>
+                                <h2>API Configuration</h2>
+                                <p>Configure the details of your API request</p>
+                            </div>
+                        </div>
+                        <div class="method-summary">
+                            <span class="method-badge" id="methodSummaryBadge">PUT</span>
+                            <div><strong id="methodSummaryText">Update existing resource</strong><span id="methodSummaryDescription">HTTP PUT request</span></div>
+                            <i data-lucide="pencil" style="width: 15px; margin-left: auto; color: var(--primary);"></i>
+                        </div>
+                    </div>
+                    <div class="config-reference-body">
+                        <div class="card-title"><i data-lucide="sliders-horizontal"></i> Request details</div>
 
                     <form id="apiForm">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Environment</label>
+                                <label><i data-lucide="globe-2" class="field-label-icon"></i> Environment</label>
                                 <select id="environment">
                                     <option value="custom" selected>🌐 Custom URL</option>
                                     <option value="dev">💻 Development</option>
@@ -1646,24 +2032,36 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Method</label>
+                                <label><i data-lucide="route" class="field-label-icon"></i> Method</label>
                                 <select id="method" required>
-                                    <option value="" disabled selected>Select Method</option>
-                                    <option value="All">All Methods</option>
+                                    <option value="" disabled>Select Method</option>
                                     <option value="GET">GET</option>
                                     <option value="POST">POST</option>
-                                    <option value="PUT">PUT</option>
+                                    <option value="PUT" selected>PUT</option>
                                     <option value="PATCH">PATCH</option>
                                     <option value="DELETE">DELETE</option>
                                 </select>
                             </div>
                         </div>
+                        <div class="form-group" style="background: #f8fafc; border: 1px solid #dbe5f2; border-radius: 10px; padding: 12px;">
+                            <label style="padding-left: 0;"><i data-lucide="file-up" class="field-label-icon"></i> Swagger / OpenAPI contract</label>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-outline" style="padding: 9px 13px;" onclick="document.getElementById('openapiFile').click()">
+                                    <i data-lucide="upload"></i> Upload contract
+                                </button>
+                                <input type="file" id="openapiFile" accept=".json,.yaml,.yml" style="display: none;" onchange="uploadOpenApi(this)">
+                                <select id="openapiEndpointSelect" style="flex: 1; min-width: 240px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: white;" onchange="applyOpenApiOperation(this.value)">
+                                    <option value="">Select an uploaded operation</option>
+                                </select>
+                            </div>
+                            <div id="openapiStatus" style="margin-top: 7px; color: var(--gray); font-size: .75rem;">Upload a contract to reuse its server URL, endpoints, and validation rules.</div>
+                        </div>
                         <div class="form-group" id="customUrlGroup" style="display: block;">
-                            <label>Base URL</label>
+                            <label><i data-lucide="link-2" class="field-label-icon"></i> Base URL</label>
                             <input type="text" id="customUrl" placeholder="https://api.example.com">
                         </div>
                         <div class="form-group">
-                            <label>API Endpoint</label>
+                            <label><i data-lucide="file-code-2" class="field-label-icon"></i> API Endpoint</label>
                             <input type="text" id="endpoint" placeholder="/api/users" required>
                         </div>
 
@@ -1776,7 +2174,7 @@
                         </div>
 
                         <div class="form-group" id="payload-section">
-                            <label>Payload (JSON)</label>
+                            <label><i data-lucide="code-2" class="field-label-icon"></i> Payload (JSON)</label>
                             <textarea id="payload" style="height: 120px; font-family: monospace;"
                                 placeholder='{"id": 1, "name": "test"}'></textarea>
                             <div id="payloadValidation"
@@ -1796,17 +2194,23 @@
                                 </table>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 12px; margin-top: 24px;">
+                        <div class="reference-actionbar">
                             <button type="submit" class="btn btn-primary" style="flex: 2;">
-                                <i data-lucide="play-circle"></i> Generate Scenarios
+                                <i data-lucide="play-circle"></i> Generate Test Cases <i data-lucide="arrow-right" style="width: 15px;"></i>
                             </button>
                             <button type="button" class="btn"
                                 style="border: 1px solid var(--border); background: white; color: var(--dark);"
                                 onclick="showExportOptions()">
                                 <i data-lucide="download"></i> Export
                             </button>
+                            <button type="button" class="btn btn-outline" onclick="openSaveTemplateModal()">
+                                <i data-lucide="bookmark-plus"></i> Save as Template
+                            </button>
+                            <span class="reference-action-meta"><i data-lucide="list-checks" style="width: 15px;"></i> Test cases: <strong id="referenceCaseCount">1</strong></span>
+                            <span class="reference-action-meta"><i data-lucide="clock-3" style="width: 15px;"></i> Estimated time: ~ 2 mins</span>
                         </div>
                     </form>
+                    </div>
                 </div>
 
                 <div class="card">
@@ -1885,7 +2289,7 @@
                         style="font-size: 0.85rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block;">Active
                         Test API</label>
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <select id="suiteSelector" onchange="loadSelectedSuite()">
+                        <select id="suiteSelector">
                             <option value="">None Selected</option>
                         </select>
                         <button id="deleteSuiteBtn" class="btn"
@@ -1918,13 +2322,17 @@
                     <div class="card-title" style="justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 8px;"><i data-lucide="list-checks"></i>
                             Functional Scenarios</div>
-                        <div style="display: flex; gap: 16px; align-items: center;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 16px; justify-content: flex-end; align-items: center;">
                             <label class="select-all-pill">
                                 <input type="checkbox" id="selectAllFuncCheckbox" checked>
                                 <span>Select All</span>
                             </label>
                             <button class="btn btn-success" id="executeBtn" onclick="executeSelectedTests()">
                                 <i data-lucide="activity"></i> Execute Run
+                            </button>
+                            <button class="btn btn-primary" id="exportResultsBtn" onclick="exportResultsExcel()"
+                                style="padding: 8px 16px; font-size: 0.85rem; display: none;">
+                                <i data-lucide="download"></i> Export Results
                             </button>
                         </div>
                     </div>
@@ -1950,23 +2358,7 @@
                     <div id="performanceTestCasesList"></div>
                 </div>
 
-                <div class="card" id="functionalLogsCard" style="display: none;">
-                    <div class="card-title" style="justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 8px;"><i data-lucide="bar-chart-3"></i>
-                            Functional Logs</div>
-                        <button class="btn btn-primary" id="exportResultsBtn" onclick="exportResultsExcel()"
-                            style="padding: 8px 16px; font-size: 0.85rem; display: none;">
-                            <i data-lucide="download"></i> Export Results
-                        </button>
-                    </div>
-                    <div id="resultsList">
-                        <div style="text-align: center; color: var(--gray); padding: 40px 0;">
-                            <i data-lucide="clock"
-                                style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;"></i>
-                            <p>Select scenarios and execute to see functional results</p>
-                        </div>
-                    </div>
-                </div>
+                <div id="resultsList" style="display: none;"></div>
 
                 <div class="card" id="performanceCard" style="display: none;">
                     <div class="card-title" style="justify-content: space-between;">
@@ -1992,14 +2384,15 @@
                     <p style="color: var(--gray);">Download standardized templates for bulk API testing</p>
                 </div>
             </div>
-            <div class="card">
-                <div style="text-align: center; padding: 40px;">
-                    <i data-lucide="file-spreadsheet"
-                        style="width: 48px; height: 48px; color: var(--primary); margin-bottom: 16px;"></i>
-                    <h3>Bulk Upload Templates</h3>
-                    <p style="color: var(--gray); margin-top: 8px;">Template download links and instructions will be
-                        placed here.</p>
+            <div class="template-toolbar">
+                <div>
+                    <strong>Saved request templates</strong>
+                    <p style="color: var(--gray); margin-top: 4px;">Reuse endpoint, payload, and field rules in one click.</p>
                 </div>
+                <button class="btn btn-primary" onclick="openSaveTemplateModal()"><i data-lucide="plus"></i> New Template</button>
+            </div>
+            <div class="card">
+                <div id="saved-templates-grid" class="template-grid"></div>
             </div>
         </div>
 
@@ -2055,6 +2448,9 @@
         let savedSuites = [];
         let lastResults = [];
         let lastExecutedTestCases = [];
+        let uploadedApiSpecifications = [];
+        let activeOpenApiRules = {};
+        let activeOpenApiResponses = {};
 
         async function persistPoolState() {
             try {
@@ -2115,6 +2511,99 @@
             if (selectedSuiteId && savedSuites.some(s => s.id === selectedSuiteId)) {
                 selector.value = selectedSuiteId;
             }
+        }
+
+        function setTestLabSummary(summary = {}) {
+            const dashSuccess = document.getElementById('dash-success');
+            const dashFailures = document.getElementById('dash-failures');
+            const dashLatency = document.getElementById('dash-latency');
+
+            if (dashSuccess) dashSuccess.textContent = summary.successRate || '0%';
+            if (dashFailures) dashFailures.textContent = summary.failures || '0';
+            if (dashLatency) dashLatency.textContent = summary.latency || '-- ms';
+        }
+
+        function getActiveSuiteId() {
+            return document.getElementById('suiteSelector')?.value || '';
+        }
+
+        function getActiveSuite() {
+            const suiteId = getActiveSuiteId();
+            return savedSuites.find(suite => suite.id === suiteId) || null;
+        }
+
+        function updateActiveSuiteSummary(summary) {
+            const suite = getActiveSuite();
+            if (!suite) return;
+
+            suite.execution_summary = {
+                ...summary,
+                updatedAt: new Date().toISOString()
+            };
+            setTestLabSummary(suite.execution_summary);
+            scheduleSuitesPersistence(suite.id);
+        }
+
+        function applySuiteExecutionSummary(suite) {
+            setTestLabSummary(suite?.execution_summary || {});
+        }
+
+        function normalizePositivePostExpectedStatus(testCases) {
+            if (!Array.isArray(testCases)) return false;
+
+            let changed = false;
+            testCases.forEach(testCase => {
+                const method = String(testCase.method || '').toUpperCase();
+                const type = String(testCase.type || '').toLowerCase();
+                if (method !== 'POST' || !type.includes('positive')) return;
+
+                if (testCase.expected !== '200 OK / 201 Created') {
+                    testCase.expected = '200 OK / 201 Created';
+                    changed = true;
+                }
+
+                if (Array.isArray(testCase.expected_status)) {
+                    const codes = testCase.expected_status.map(String);
+                    if (codes.includes('200') && !codes.includes('201')) {
+                        testCase.expected_status = ['200', '201'];
+                        changed = true;
+                    }
+                }
+            });
+
+            return changed;
+        }
+
+        function resetTestLabRunState() {
+            lastResults = [];
+            lastExecutedTestCases = [];
+
+            const resultsList = document.getElementById('resultsList');
+            if (resultsList) {
+                resultsList.innerHTML = '';
+                resultsList.style.display = 'none';
+            }
+
+            const exportResultsBtn = document.getElementById('exportResultsBtn');
+            if (exportResultsBtn) exportResultsBtn.style.display = 'none';
+
+            const performanceResultsList = document.getElementById('performanceResultsList');
+            if (performanceResultsList) {
+                performanceResultsList.innerHTML = `
+                    <div style="text-align: center; color: var(--gray); padding: 40px 0;" id="perf-placeholder">
+                        <i data-lucide="activity"
+                            style="width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3;"></i>
+                        <p>Run a load test to see performance results</p>
+                    </div>
+                `;
+            }
+
+            setTestLabSummary();
+
+            document.querySelectorAll('.inline-execution-result').forEach(panel => {
+                panel.className = 'inline-execution-result';
+                panel.innerHTML = '';
+            });
         }
 
         async function restorePersistedState() {
@@ -2179,6 +2668,41 @@
         function showError(msg) { showToast(msg, 'error'); }
         function showSuccess(msg) { showToast(msg, 'success'); }
 
+        async function copyTextToClipboard(text, successMessage = 'Copied to clipboard') {
+            const value = String(text ?? '');
+
+            if (!value) {
+                showError('Nothing to copy.');
+                return;
+            }
+
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(value);
+                } else {
+                    const textarea = document.createElement('textarea');
+                    textarea.value = value;
+                    textarea.setAttribute('readonly', '');
+                    textarea.style.position = 'fixed';
+                    textarea.style.top = '-9999px';
+                    textarea.style.left = '-9999px';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    textarea.remove();
+                }
+
+                showSuccess(successMessage);
+            } catch (e) {
+                showError('Unable to copy to clipboard.');
+            }
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output');
+            copyTextToClipboard(output ? output.textContent : '', 'JSON copied to clipboard.');
+        }
+
         // EXTRACT & GROUP LOGIC
         function extractDomainName(url) {
             if (!url || url.toLowerCase() === 'mock' || url.toLowerCase() === 'n/a') return 'custom';
@@ -2201,6 +2725,9 @@
             let method = tc.method || 'GET';
             return `${domain}_${cleanEndpoint}_${method}`;
         }
+        /*
+        Unused helper retained for reference. Re-enable only if suite
+        de-duplication needs a stable request/scenario signature.
         function getConfigSignature(testCases) {
             if (!testCases || !testCases.length) return '';
 
@@ -2215,6 +2742,7 @@
                 }))
             });
         }
+        */
 
         function addToPool(scenarios) {
             let incomingGroups = {};
@@ -2254,7 +2782,8 @@
             document.querySelectorAll('#dash-generated').forEach(el => el.textContent = keys.length);
 
             // Update Sidebar dynamically
-            const navContainer = document.getElementById('dynamic-domain-nav');
+            const navContainer = document.getElementById('dynamic-pool-nav');
+            if (!navContainer) return;
             navContainer.innerHTML = '';
             keys.forEach(key => {
                 navContainer.innerHTML += `
@@ -3791,24 +4320,15 @@
                     }) || null;
             }
 
-            console.log(
-                'PERFORMANCE CONFIG LOOKUP:',
-                {
-                    generatedTestCaseId:
-                        testCaseId,
-
-                    generatedScenario:
-                        testCaseScenario,
-
-                    availableConfigIds:
-                        Object.keys(
-                            performanceScenarioConfigs
-                        ),
-
-                    matchedConfig:
-                        config
-                }
-            );
+            /*
+            Debug only.
+            console.log('PERFORMANCE CONFIG LOOKUP:', {
+                generatedTestCaseId: testCaseId,
+                generatedScenario: testCaseScenario,
+                availableConfigIds: Object.keys(performanceScenarioConfigs),
+                matchedConfig: config
+            });
+            */
 
             if (!config) {
                 return null;
@@ -4279,10 +4799,13 @@
                 'Performance configuration saved.'
             );
 
+            /*
+            Debug only.
             console.log(
                 'PERFORMANCE SCENARIO CONFIGURATIONS:',
                 performanceScenarioConfigs
             );
+            */
         }
         // PERFORMANCE CONFIGURATION SEQUENTIAL ADDER
         /*
@@ -4394,7 +4917,7 @@
         }
 
         function initAllCustomSelects() {
-            document.querySelectorAll("select:not(#suiteSelector)").forEach(sel => initializeCustomSelect(sel));
+            document.querySelectorAll("select:not(#suiteSelector):not(#openapiEndpointSelect)").forEach(sel => initializeCustomSelect(sel));
         }
 
         const form = document.getElementById('apiForm');
@@ -4405,11 +4928,17 @@
         const payloadValidation = document.getElementById('payloadValidation');
 
         lucide.createIcons();
+        document.querySelector('.topbar-menu')?.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-collapsed');
+        });
         document.addEventListener("DOMContentLoaded", async () => {
             initAllCustomSelects();
+            document.getElementById('suiteSelector')?.addEventListener('change', () => loadSelectedSuite());
             await restorePersistedState();
             await loadDatabaseSessions();
             await restorePoolFromDatabase();
+            await loadSavedTemplates();
+            await loadOpenApiSpecifications();
         });
 
         const environmentUrls = { custom: '', dev: 'https://api-dev.example.com', staging: 'https://api-staging.example.com', production: 'https://api.example.com' };
@@ -4426,6 +4955,20 @@
 
         document.getElementById('method').addEventListener('change', (e) => {
             const val = e.target.value;
+            const methodSummary = document.getElementById('methodSummaryText');
+            const methodSummaryDescription = document.getElementById('methodSummaryDescription');
+            const methodBadge = document.getElementById('methodSummaryBadge');
+            const methodSummaries = {
+                GET: { title: 'Retrieve existing resource', description: 'HTTP GET request' },
+                POST: { title: 'Create a new resource', description: 'HTTP POST request' },
+                PUT: { title: 'Update existing resource', description: 'HTTP PUT request' },
+                PATCH: { title: 'Modify resource fields', description: 'HTTP PATCH request' },
+                DELETE: { title: 'Delete existing resource', description: 'HTTP DELETE request' }
+            };
+            const summary = methodSummaries[val] || { title: 'Select an HTTP method', description: 'Choose a request method' };
+            if (methodSummary) methodSummary.textContent = summary.title;
+            if (methodSummaryDescription) methodSummaryDescription.textContent = summary.description;
+            if (methodBadge) methodBadge.textContent = val || 'HTTP';
             document.getElementById('query-params-section').style.display = (val === 'GET' || val === 'DELETE') ? 'block' : 'none';
             document.getElementById('payload-section').style.display = (val === 'GET' || val === 'DELETE') ? 'none' : 'block';
             if (val !== 'GET' && val !== 'DELETE') {
@@ -4495,9 +5038,19 @@
                 let type = getFieldType(val);
                 let isReq = 'required';
 
-                if (existingConfigs[key]) {
+                const openApiRule = activeOpenApiRules[key];
+                if (openApiRule) {
+                    type = openApiRule.type || type;
+                    isReq = openApiRule.required ? 'required' : 'optional';
+                }
+
+                if (existingConfigs[key] && !openApiRule) {
                     type = existingConfigs[key].type;
                     isReq = existingConfigs[key].required;
+                }
+
+                if (hasOptionalOpenApiAncestor(key)) {
+                    isReq = 'optional';
                 }
 
                 const row = document.createElement('tr');
@@ -4512,6 +5065,22 @@
                 tbody.appendChild(row);
             });
             tbody.querySelectorAll('select').forEach(sel => initializeCustomSelect(sel));
+
+            tbody.querySelectorAll('tr').forEach(row => {
+                const field = row.cells[0]?.textContent.trim();
+                const rule = activeOpenApiRules[field];
+                if (!rule) return;
+                const typeSelect = row.querySelector('.type-select');
+                const requiredSelect = row.querySelector('.required-select');
+                if (typeSelect && rule.type) {
+                    typeSelect.value = rule.type;
+                    typeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (requiredSelect) {
+                    requiredSelect.value = (rule.required && !hasOptionalOpenApiAncestor(field)) ? 'required' : 'optional';
+                    requiredSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
         }
 
         function flattenObject(obj, parent = '', res = {}) {
@@ -4540,6 +5109,35 @@
             return typeof val;
         }
 
+        function getPathPrefixes(fieldPath) {
+            const parts = String(fieldPath || '').split('.');
+            const prefixes = [];
+            for (let i = 1; i < parts.length; i++) {
+                prefixes.push(parts.slice(0, i).join('.'));
+            }
+            return prefixes;
+        }
+
+        function hasOptionalOpenApiAncestor(fieldPath, rules = activeOpenApiRules) {
+            return getPathPrefixes(fieldPath).some(prefix => {
+                const rule = rules[prefix];
+                return rule && rule.required === false;
+            });
+        }
+
+        function normalizeOpenApiRules(rules) {
+            const normalized = {};
+            Object.entries(rules || {}).forEach(([field, rule]) => {
+                normalized[field] = { ...rule };
+            });
+            Object.entries(normalized).forEach(([field, rule]) => {
+                if (hasOptionalOpenApiAncestor(field, normalized)) {
+                    rule.required = false;
+                }
+            });
+            return normalized;
+        }
+
         async function handleExcelUpload(input) {
             if (!input.files?.[0]) return;
             const uploadedFilename = input.files[0].name;
@@ -4555,6 +5153,112 @@
                 } else showError(data.error);
             } catch (e) { showError('Upload failed'); }
             finally { input.value = ''; lucide.createIcons(); }
+        }
+
+        function buildOpenApiExample(schema) {
+            if (!schema || typeof schema !== 'object') return {};
+            if (schema.example !== undefined) return schema.example;
+            if (schema.default !== undefined) return schema.default;
+            if (Array.isArray(schema.enum) && schema.enum.length > 0) return schema.enum[0];
+
+            if (schema.type === 'array') {
+                return [buildOpenApiExample(schema.items || {})];
+            }
+
+            if (schema.type && schema.type !== 'object' && !schema.properties) {
+                if (schema.type === 'integer' || schema.type === 'number') return 1;
+                if (schema.type === 'boolean') return true;
+                return schema.format === 'email' ? 'user@example.com' : 'string';
+            }
+
+            const example = {};
+            Object.entries(schema.properties || {}).forEach(([name, definition]) => {
+                example[name] = buildOpenApiExample(definition);
+            });
+            return example;
+        }
+
+        function populateOpenApiOperations() {
+            const select = document.getElementById('openapiEndpointSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">Select an uploaded operation</option>';
+            uploadedApiSpecifications.forEach(spec => {
+                (spec.data?.endpoints || []).forEach((operation, index) => {
+                    const option = document.createElement('option');
+                    option.value = `${spec.id}:${index}`;
+                    option.textContent = `${operation.method} ${operation.path}${operation.summary ? ` - ${operation.summary}` : ''}`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function applyOpenApiOperation(value) {
+            if (!value) return;
+            const [specId, operationIndex] = value.split(':');
+            const spec = uploadedApiSpecifications.find(item => item.id === specId);
+            const operation = spec?.data?.endpoints?.[Number(operationIndex)];
+            if (!spec || !operation) return;
+
+            document.getElementById('customUrl').value = spec.base_url || '';
+            document.getElementById('endpoint').value = operation.path || '';
+            document.getElementById('method').value = operation.method || 'GET';
+            activeOpenApiRules = normalizeOpenApiRules(operation.rules || {});
+            activeOpenApiResponses = operation.responses || {};
+            document.getElementById('environment').value = 'custom';
+            document.getElementById('environment').dispatchEvent(new Event('change', { bubbles: true }));
+            document.getElementById('method').dispatchEvent(new Event('change', { bubbles: true }));
+            const operationPayload = operation.example !== null && operation.example !== undefined
+                ? operation.example
+                : buildOpenApiExample(operation.schema);
+            document.getElementById('payload').value = JSON.stringify(operationPayload, null, 2);
+            payloadInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+            Object.entries(activeOpenApiRules).forEach(([field, rule]) => {
+                const row = Array.from(document.querySelectorAll('#fieldTableBody tr')).find(item => item.cells[0]?.textContent.trim() === field);
+                if (!row) return;
+                const typeSelect = row.querySelector('.type-select');
+                const requiredSelect = row.querySelector('.required-select');
+                if (typeSelect && rule.type) typeSelect.value = rule.type;
+                if (requiredSelect) requiredSelect.value = (rule.required && !hasOptionalOpenApiAncestor(field)) ? 'required' : 'optional';
+            });
+            document.getElementById('openapiStatus').textContent = `${spec.name}: ${Object.keys(activeOpenApiRules).length} validation rule(s) applied.`;
+        }
+
+        async function loadOpenApiSpecifications() {
+            try {
+                const response = await fetch('/api/openapi-specifications');
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    uploadedApiSpecifications = result.specifications || [];
+                    populateOpenApiOperations();
+                }
+            } catch (error) {
+                console.warn('Unable to load OpenAPI specifications:', error);
+            }
+        }
+
+        async function uploadOpenApi(input) {
+            if (!input.files?.[0]) return;
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+            try {
+                const response = await fetch('/api/upload-openapi', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to upload contract');
+                const specification = result.specification;
+                uploadedApiSpecifications = [specification, ...uploadedApiSpecifications.filter(item => item.id !== specification.id)];
+                populateOpenApiOperations();
+                const selector = document.getElementById('openapiEndpointSelect');
+                if (specification.data?.endpoints?.length) {
+                    selector.value = `${specification.id}:0`;
+                    applyOpenApiOperation(selector.value);
+                }
+                showSuccess(`Uploaded and stored ${specification.name}`);
+            } catch (error) {
+                showError(`OpenAPI upload failed: ${error.message}`);
+            } finally {
+                input.value = '';
+            }
         }
 
         async function restorePoolFromDatabase() {
@@ -4636,6 +5340,9 @@
                     const requiredSelect = row.querySelector('.required-select');
                     if (typeSelect && requiredSelect) fieldConfigs[field] = { type: typeSelect.value, required: requiredSelect.value === 'required' };
                 });
+                Object.entries(activeOpenApiRules).forEach(([field, rule]) => {
+                    fieldConfigs[field] = { ...rule, required: Boolean(rule.required) };
+                });
 
                 let envSelection = document.getElementById('environment').value;
                 let envUrl = (envSelection === 'custom') ? document.getElementById('customUrl').value : environmentUrls[envSelection];
@@ -4648,6 +5355,8 @@
                             endpoint, method: m, payload: payloadInput.value,
                             field_name: document.getElementById('field-name').value, search_string: document.getElementById('search-txt').value,
                             field_configs: fieldConfigs,
+                            openapi_rules: activeOpenApiRules,
+                            openapi_responses: activeOpenApiResponses,
                             baseUrl: envUrl,
                             param_type: paramType,
                         })
@@ -4682,17 +5391,19 @@
                                 tc.perf_config = {};
                             }
 
-                            console.log(
-                                'PERFORMANCE CONFIG ASSIGNMENT:',
-                                {
-                                    scenario: tc.scenario,
-                                    testType: tc.type,
-                                    perf_config: tc.perf_config
-                                }
-                            );
+                            /*
+                            Debug only.
+                            console.log('PERFORMANCE CONFIG ASSIGNMENT:', {
+                                scenario: tc.scenario,
+                                testType: tc.type,
+                                perf_config: tc.perf_config
+                            });
+                            */
                         });
                         data.test_cases.forEach(tc => {
-                            tc.field_configs = JSON.parse(JSON.stringify(fieldConfigs));
+                            tc.field_configs = JSON.parse(JSON.stringify(
+                                tc.field_configs || fieldConfigs
+                            ));
                         });
                         allCases = allCases.concat(data.test_cases);
                     }
@@ -4711,8 +5422,10 @@
         function displayResultsPreview(testCases, endpoint, method) {
             outputEl.textContent = JSON.stringify({ endpoint, method, count: testCases.length, testCases }, null, 2);
             resultCount.textContent = testCases.length;
+            document.getElementById('referenceCaseCount').textContent = testCases.length;
             document.getElementById('empty-output').style.display = 'none';
             outputSection.style.display = 'block';
+            document.querySelector('#test-plan-config-view #config-grid > .card:nth-child(2)').style.display = 'block';
         }
 
         // ==============================================
@@ -4827,6 +5540,9 @@
             loadSelectedSuite();
         }
 
+        /*
+        Unused import helper retained for reference. Current suite creation
+        flows use createSuiteFromSelection() and loadSelectedSuite().
         function createAndLoadSuiteFromCases(cases, suiteName) {
             if (!Array.isArray(cases) || cases.length === 0) return;
 
@@ -4838,17 +5554,24 @@
 
             loadSelectedSuite();
         }
+        */
 
         function loadSelectedSuite(shouldPersist = true) {
             const suiteId = document.getElementById('suiteSelector').value;
             const deleteBtn = document.getElementById('deleteSuiteBtn');
 
+            resetTestLabRunState();
+
             if (!suiteId) {
                 activeSuiteCases = [];
                 document.getElementById('testCasesWrapper').style.display = 'none';
                 document.getElementById('testLabEmptyState').style.display = 'block';
+                document.getElementById('functionalScenariosCard').style.display = 'none';
+                document.getElementById('performanceScenariosCard').style.display = 'none';
+                document.getElementById('performanceCard').style.display = 'none';
                 if (deleteBtn) deleteBtn.style.display = 'none';
                 if (shouldPersist) scheduleSuitesPersistence('');
+                lucide.createIcons();
                 return;
             }
 
@@ -4856,13 +5579,21 @@
 
             const suite = savedSuites.find(s => s.id === suiteId);
             if (suite) {
-                activeSuiteCases = suite.cases;
+                activeSuiteCases = Array.isArray(suite.cases) ? suite.cases : [];
+                const expectedStatusChanged = normalizePositivePostExpectedStatus(activeSuiteCases);
                 document.getElementById('testLabEmptyState').style.display = 'none';
                 renderTestLabTables();
-                if (shouldPersist) scheduleSuitesPersistence(suiteId);
+                applySuiteExecutionSummary(suite);
+                if (shouldPersist || expectedStatusChanged) scheduleSuitesPersistence(suiteId);
             } else if (shouldPersist) {
+                activeSuiteCases = [];
+                document.getElementById('testCasesWrapper').style.display = 'none';
+                document.getElementById('testLabEmptyState').style.display = 'block';
+                if (deleteBtn) deleteBtn.style.display = 'none';
                 scheduleSuitesPersistence('');
             }
+
+            lucide.createIcons();
         }
 
         function deleteActiveSuite() {
@@ -4881,8 +5612,8 @@
             const perfList = document.getElementById('performanceTestCasesList');
             const funcCard = document.getElementById('functionalScenariosCard');
             const perfCard = document.getElementById('performanceScenariosCard');
-            const funcLogsCard = document.getElementById('functionalLogsCard');
             const perfLogsCard = document.getElementById('performanceCard');
+            const exportResultsBtn = document.getElementById('exportResultsBtn');
 
             funcList.innerHTML = '';
             perfList.innerHTML = '';
@@ -4991,7 +5722,7 @@
                 testCaseCard.setAttribute('title', tc.scenario || 'Test Scenario');
 
                 testCaseCard.innerHTML = `
-                    <div style="display: flex; align-items: center; width: 100%; gap: 12px;">
+                    <div class="test-case-main-row">
                         <div class="checkbox-col"><input type="checkbox" class="test-case-checkbox" data-index="${i}" checked></div>
                         <div class="testcase-info">
                             <div class="tc-id">TC-${tc.id || tc.test_case_id || tc.test_case_number || (i + 1)}</div>
@@ -5002,6 +5733,7 @@
                         <div class="expected-col"><div class="expected-badge" title="Expected: ${expectedDisplay}">${expectedDisplay}</div></div>
                         <div class="status-col"><div class="execution-badge ${executionClass}" id="${isPerf ? 'perf-status-' : 'func-status-'}${i}">${executionText}</div></div>
                     </div>
+                    ${!isPerf ? `<div class="inline-execution-result" id="func-result-${i}"></div>` : ''}
                 `;
                 targetList.appendChild(testCaseCard);
             });
@@ -5010,7 +5742,7 @@
             if (perfLogsCard) perfLogsCard.style.display = hasPerf ? 'block' : 'none';
 
             funcCard.style.display = hasFunc ? 'block' : 'none';
-            if (funcLogsCard) funcLogsCard.style.display = hasFunc ? 'block' : 'none';
+            if (exportResultsBtn) exportResultsBtn.style.display = 'none';
 
             document.getElementById('testCasesWrapper').style.display = 'block';
 
@@ -5056,6 +5788,9 @@
             });
         }
 
+        /*
+        Duplicate escapeHtml definition removed from execution. The active
+        implementation appears earlier in this script and is function-hoisted.
         function escapeHtml(value) {
             if (value === null || value === undefined) return '';
 
@@ -5066,6 +5801,7 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
+        */
         // ============================================================
         // PRE-EXECUTION VALIDATION
         // ============================================================
@@ -5182,6 +5918,14 @@
             return 'string';
         }
 
+        function safeDecodeURIComponent(value) {
+            try {
+                return decodeURIComponent(value);
+            } catch (e) {
+                return value;
+            }
+        }
+
 
         function parseValidationInput(input, method) {
 
@@ -5242,7 +5986,7 @@
                                 rest.join('=');
 
                             const value =
-                                decodeURIComponent(rawValue);
+                                safeDecodeURIComponent(rawValue);
 
                             if (value === 'true') {
                                 params[key] = true;
@@ -5471,15 +6215,18 @@
             const method = String(tc.method || 'GET').toUpperCase();
             const fieldConfigs = getFieldConfigsForTestCase(tc);
 
+            /*
+            Debug only.
             console.log('VALIDATION PRE-CHECK:', {
                 id: tc.id,
                 scenario: tc.scenario,
-                method: method,
+                method,
                 expected: tc.expected,
                 expected_status: tc.expected_status,
-                fieldConfigs: fieldConfigs,
+                fieldConfigs,
                 input: tc.input
             });
+            */
 
             if (!fieldConfigs || Object.keys(fieldConfigs).length === 0) {
                 return {
@@ -5510,6 +6257,8 @@
 
             const inputData = parsed.data;
 
+            /*
+            Debug only.
             console.log('VALIDATION INPUT DEBUG:', {
                 method,
                 input: tc.input,
@@ -5518,6 +6267,7 @@
                 parsed,
                 inputData
             });
+            */
 
             if (
                 inputData === null ||
@@ -5532,6 +6282,10 @@
             const errors = [];
 
             Object.entries(fieldConfigs).forEach(([fieldPath, config]) => {
+                const configSource = String(config.in || '').toLowerCase();
+                if (method !== 'GET' && configSource && configSource !== 'body') return;
+                if (method === 'GET' && configSource && configSource !== 'query') return;
+
                 const required = String(config.required).toLowerCase() === 'true';
                 const expectedType = String(config.type || '').toLowerCase();
 
@@ -5555,6 +6309,17 @@
                 // Required null
                 // -----------------------------------------
                 if (value === null) {
+                    if (
+                        Array.isArray(config.enum) &&
+                        config.enum.length > 0 &&
+                        !config.enum.includes(null)
+                    ) {
+                        errors.push(
+                            `Field "${fieldPath}" must be one of: ${config.enum.join(', ')}`
+                        );
+                        return;
+                    }
+
                     if (required) {
                         errors.push(`Required field "${fieldPath}" cannot be null`);
                     }
@@ -5631,6 +6396,17 @@
                     }
                 }
 
+                if (
+                    Array.isArray(config.enum) &&
+                    config.enum.length > 0 &&
+                    !config.enum.includes(value)
+                ) {
+                    errors.push(
+                        `Field "${fieldPath}" must be one of: ${config.enum.join(', ')}`
+                    );
+                    return;
+                }
+
                 // -----------------------------------------
                 // Format validation
                 // -----------------------------------------
@@ -5665,6 +6441,12 @@
                 tc.expected ||
                 tc.expected_status ||
                 '400';
+
+            const expectedCodeMatch =
+                String(expected).match(/\b(4\d{2})\b/);
+
+            const validationStatusCode =
+                expectedCodeMatch ? Number(expectedCodeMatch[1]) : 400;
 
             const errors =
                 validationResult.errors || [];
@@ -5807,8 +6589,8 @@
             return {
                 testCaseId,
                 status: 'pass',
-                statusCode: 400,
-                displayStatusCode: '4XX',
+                statusCode: validationStatusCode,
+                displayStatusCode: String(validationStatusCode),
 
                 responseBody: JSON.stringify({
                     error: 'Validation Error',
@@ -5829,6 +6611,76 @@
                     `Execution: API request skipped.`
             };
         }
+
+        function toggleExecutionResult(index) {
+            const body = document.getElementById(`func-result-body-${index}`);
+            const label = document.getElementById(`func-result-toggle-label-${index}`);
+            const icon = document.getElementById(`func-result-toggle-icon-${index}`);
+            if (!body || !label || !icon) return;
+
+            const collapsed = body.classList.toggle('collapsed');
+            label.textContent = collapsed ? 'Expand' : 'Compress';
+            icon.setAttribute('data-lucide', collapsed ? 'chevron-down' : 'chevron-up');
+            lucide.createIcons();
+        }
+
+        function formatExecutionResponseBody(responseBody) {
+            if (responseBody === null || responseBody === undefined || responseBody === '') {
+                return '(No response body)';
+            }
+
+            try {
+                const parsedBody = typeof responseBody === 'string'
+                    ? JSON.parse(responseBody)
+                    : responseBody;
+                return JSON.stringify(parsedBody, null, 2);
+            } catch (e) {
+                return String(responseBody);
+            }
+        }
+
+        function copyExecutionResponsePayload(index) {
+            const payload = document.getElementById(`func-response-payload-${index}`);
+            copyTextToClipboard(payload ? payload.textContent : '', 'Response payload copied to clipboard.');
+        }
+
+        function renderFunctionalResultUnderTestCase(index, result, testCase) {
+            const container = document.getElementById(`func-result-${index}`);
+            if (!container) return;
+
+            const isPass = result.status === 'pass';
+            const isWarning = result.status === 'warning';
+            const statusText = isPass ? 'PASS' : isWarning ? 'WARNING' : 'FAIL';
+            const badgeClass = isPass ? 'badge-success' : isWarning ? 'badge-warning' : 'badge-danger';
+            const statusCode = result.displayStatusCode || result.statusCode || 'N/A';
+            const responseBody = formatExecutionResponseBody(result.responseBody);
+            const details = result.details || 'No details available';
+
+            container.className = 'inline-execution-result visible';
+            container.innerHTML = `
+                <div class="inline-result-header">
+                    <span class="badge ${badgeClass}">${statusText}</span>
+                    <span class="badge badge-info">HTTP ${escapeHtml(statusCode)}</span>
+                    <div class="inline-result-title">${escapeHtml(testCase?.scenario || result.testCaseId || `Test ${index + 1}`)}</div>
+                    <button type="button" class="inline-result-toggle" onclick="toggleExecutionResult(${index})">
+                        <i id="func-result-toggle-icon-${index}" data-lucide="chevron-down" style="width: 14px; height: 14px;"></i>
+                        <span id="func-result-toggle-label-${index}">Expand</span>
+                    </button>
+                </div>
+                <div class="inline-result-body collapsed" id="func-result-body-${index}">
+                    <div class="result-details">${escapeHtml(details.trim())}</div>
+                    <div class="inline-response-header">
+                        <div class="inline-response-title">Response Payload</div>
+                        <button type="button" class="inline-copy-button" onclick="copyExecutionResponsePayload(${index})">
+                            <i data-lucide="copy" style="width: 13px; height: 13px;"></i>
+                            <span>Copy</span>
+                        </button>
+                    </div>
+                    <pre class="result-details inline-response-payload" id="func-response-payload-${index}">${escapeHtml(responseBody)}</pre>
+                </div>
+            `;
+        }
+
         async function executeSelectedTests() {
 
             if (
@@ -5869,6 +6721,11 @@
                 return;
             }
 
+            document.querySelectorAll('.inline-execution-result').forEach(panel => {
+                panel.className = 'inline-execution-result';
+                panel.innerHTML = '';
+            });
+
             const btn =
                 document.getElementById(
                     'executeBtn'
@@ -5900,19 +6757,14 @@
                     const validation =
                         validateTestCaseBeforeExecution(tc);
 
-                    console.log(
-                        'PRE-EXECUTION VALIDATION:',
-                        {
-                            testCase:
-                                tc.id ||
-                                tc.test_case_id,
-
-                            scenario:
-                                tc.scenario,
-
-                            validation
-                        }
-                    );
+                    /*
+                    Debug only.
+                    console.log('PRE-EXECUTION VALIDATION:', {
+                        testCase: tc.id || tc.test_case_id,
+                        scenario: tc.scenario,
+                        validation
+                    });
+                    */
 
                     if (
                         validation.checked &&
@@ -5942,25 +6794,30 @@
 
                 let serverResults = [];
 
+                const executionSource =
+                    casesForServer[0] ||
+                    selected[0] ||
+                    {};
+
+                const activeEndpoint =
+                    executionSource.endpoint || '/';
+
+                const activeMethod =
+                    executionSource.method || 'GET';
+
+                let baseUrl =
+                    executionSource.baseUrl ||
+                    executionSource.base_url ||
+                    'custom';
+
+                if (
+                    baseUrl === 'N/A' ||
+                    baseUrl === 'No-Base-URL'
+                ) {
+                    baseUrl = 'custom';
+                }
+
                 if (casesForServer.length > 0) {
-
-                    const activeEndpoint =
-                        casesForServer[0].endpoint || '/';
-
-                    const activeMethod =
-                        casesForServer[0].method || 'GET';
-
-                    let baseUrl =
-                        casesForServer[0].baseUrl ||
-                        casesForServer[0].base_url ||
-                        'custom';
-
-                    if (
-                        baseUrl === 'N/A' ||
-                        baseUrl === 'No-Base-URL'
-                    ) {
-                        baseUrl = 'custom';
-                    }
 
                     const res =
                         await fetch(
@@ -6110,6 +6967,8 @@
 
                         const isPass =
                             r.status === 'pass';
+                        const isWarning =
+                            r.status === 'warning';
 
                         if (isPass) {
                             passed++;
@@ -6256,16 +7115,37 @@
                             `Response Body:\n` +
                             `${safeResponseBody}`;
 
+                        const inlineResultIndex =
+                            activeSuiteCases.findIndex(
+                                tc =>
+                                    (
+                                        tc.id ||
+                                        tc.test_case_id
+                                    ) === testCaseId
+                            );
+
+                        if (inlineResultIndex !== -1) {
+                            renderFunctionalResultUnderTestCase(
+                                inlineResultIndex,
+                                r,
+                                activeSuiteCases[inlineResultIndex]
+                            );
+                        }
+
                         item.innerHTML = `
                     <div class="result-header">
 
-                        <span class="badge ${isPass
+                            <span class="badge ${isPass
                                 ? 'badge-success'
-                                : 'badge-danger'
+                                : isWarning
+                                    ? 'badge-warning'
+                                    : 'badge-danger'
                             }">
                             ${isPass
                                 ? 'PASS'
-                                : 'FAIL'
+                                : isWarning
+                                    ? 'WARNING'
+                                    : 'FAIL'
                             }
                         </span>
 
@@ -6308,38 +7188,11 @@
                     }
                 );
 
+                lucide.createIcons();
+
                 // =====================================================
                 // STEP 6 — DASHBOARD METRICS
                 // =====================================================
-
-                if (
-                    document.getElementById(
-                        'dash-success'
-                    )
-                ) {
-
-                    document.getElementById(
-                        'dash-success'
-                    ).textContent =
-                        `${Math.round(
-                            (passed /
-                                finalResults.length) *
-                            100
-                        )}%`;
-                }
-
-                if (
-                    document.getElementById(
-                        'dash-failures'
-                    )
-                ) {
-
-                    document.getElementById(
-                        'dash-failures'
-                    ).textContent =
-                        finalResults.length -
-                        passed;
-                }
 
                 const latency =
                     Math.round(
@@ -6347,17 +7200,17 @@
                         start
                     );
 
-                if (
-                    document.getElementById(
-                        'dash-latency'
-                    )
-                ) {
+                const successRate =
+                    finalResults.length > 0
+                        ? Math.round((passed / finalResults.length) * 100)
+                        : 0;
 
-                    document.getElementById(
-                        'dash-latency'
-                    ).textContent =
-                        `${latency}ms`;
-                }
+                updateActiveSuiteSummary({
+                    type: 'Functional',
+                    successRate: `${successRate}%`,
+                    failures: String(finalResults.length - passed),
+                    latency: `${latency}ms`
+                });
 
                 showSuccess(
                     `Execution complete: ` +
@@ -6605,6 +7458,8 @@
             let total = selected.length;
             let totalReqs = 0;
             let totalFails = 0;
+            let totalLatencyMs = 0;
+            let latencySampleCount = 0;
 
             for (let i = 0; i < selected.length; i++) {
                 const tc = selected[i];
@@ -6627,10 +7482,10 @@
 
                 if (performanceConfig.type === 'caching') {
 
-                    console.log(
-                        'CACHING CONFIG:',
-                        performanceConfig
-                    );
+                    /*
+                    Debug only.
+                    console.log('CACHING CONFIG:', performanceConfig);
+                    */
 
                     try {
 
@@ -6683,6 +7538,12 @@
                         totalFails += Number(
                             metrics.failures || 0
                         );
+
+                        const avgLatency = Number(metrics.avg_ms || 0);
+                        if (Number.isFinite(avgLatency)) {
+                            totalLatencyMs += avgLatency;
+                            latencySampleCount++;
+                        }
 
                         let cleanBase =
                             (tc.baseUrl || tc.base_url || '').replace(/\/$/, '');
@@ -6859,7 +7720,10 @@ ${sampleOutput}
                     showError(`Scenario TC-${tc.id || tc.test_case_id || tc.test_case_number} lacks a valid Base URL. Locust cannot attack a mock environment.`);
                     continue;
                 }
+                /*
+                Debug only.
                 console.log("TEST CASE:", tc);
+                */
                 try {
                     const res = await fetch('/api/run-performance', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -6948,6 +7812,11 @@ ${sampleOutput}
                     totalFails +=
                         parseInt(failCount, 10) || 0;
 
+                    const avgLatency = Number(avgMs || 0);
+                    if (Number.isFinite(avgLatency)) {
+                        totalLatencyMs += avgLatency;
+                        latencySampleCount++;
+                    }
 
                     const isPass =
                         (parseInt(failCount, 10) || 0) === 0
@@ -7025,11 +7894,17 @@ ${sampleOutput}`;
                 }
             }
 
-            if (document.getElementById('dash-failures')) document.getElementById('dash-failures').textContent = totalFails;
-            if (document.getElementById('dash-success')) {
-                const sr = totalReqs > 0 ? Math.round(((totalReqs - totalFails) / totalReqs) * 100) : 0;
-                document.getElementById('dash-success').textContent = `${sr}%`;
-            }
+            const sr = totalReqs > 0 ? Math.round(((totalReqs - totalFails) / totalReqs) * 100) : 0;
+            const avgLatency = latencySampleCount > 0
+                ? `${Math.round(totalLatencyMs / latencySampleCount)} ms`
+                : '-- ms';
+
+            updateActiveSuiteSummary({
+                type: 'Performance',
+                successRate: `${sr}%`,
+                failures: String(totalFails),
+                latency: avgLatency
+            });
 
             btn.disabled = false;
             btn.innerHTML = originalHtml;
@@ -7055,8 +7930,6 @@ ${sampleOutput}`;
             });
 
             try {
-                console.log("allCases:", allCases);
-
                 if (!allCases || allCases.length === 0) {
                     showError("No generated test cases available for export");
                     return;
@@ -7091,6 +7964,147 @@ ${sampleOutput}`;
 
         function showExportOptions() { document.getElementById('exportModal').style.display = 'flex'; }
         function hideExportOptions() { document.getElementById('exportModal').style.display = 'none'; }
+
+        function escapeTemplateText(value) {
+            return String(value || '').replace(/[&<>'"]/g, character => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[character]));
+        }
+
+        function getCurrentTemplateConfiguration() {
+            const { selectedEnvironment, baseUrl } = getSelectedEnvironmentConfig();
+            const fieldConfigs = {};
+            document.querySelectorAll('#fieldTableBody tr').forEach(row => {
+                const typeSelect = row.querySelector('.type-select');
+                const requiredSelect = row.querySelector('.required-select');
+                if (typeSelect && requiredSelect) {
+                    fieldConfigs[row.cells[0].textContent.trim()] = {
+                        type: typeSelect.value,
+                        required: requiredSelect.value === 'required'
+                    };
+                }
+            });
+
+            return {
+                environment: selectedEnvironment,
+                baseUrl,
+                endpoint: document.getElementById('endpoint').value.trim(),
+                method: document.getElementById('method').value,
+                payload: payloadInput.value,
+                fieldName: document.getElementById('field-name').value,
+                searchText: document.getElementById('search-txt').value,
+                parameterType: document.querySelector('input[name="param_type"]:checked')?.value || 'query',
+                fieldConfigs
+            };
+        }
+
+        function openSaveTemplateModal() {
+            const configuration = getCurrentTemplateConfiguration();
+            if (!configuration.method || !configuration.endpoint) {
+                showError('Select a method and enter an endpoint before saving a template');
+                return;
+            }
+            document.getElementById('templateName').value = `${configuration.method} ${configuration.endpoint}`;
+            document.getElementById('templateDescription').value = '';
+            document.getElementById('saveTemplateModal').style.display = 'flex';
+            document.getElementById('templateName').focus();
+        }
+
+        function hideSaveTemplateModal() {
+            document.getElementById('saveTemplateModal').style.display = 'none';
+        }
+
+        async function saveCurrentTemplate() {
+            const name = document.getElementById('templateName').value.trim();
+            if (!name) { showError('Enter a template name'); return; }
+            try {
+                const response = await fetch('/api/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        description: document.getElementById('templateDescription').value.trim(),
+                        configuration: getCurrentTemplateConfiguration()
+                    })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to save template');
+                hideSaveTemplateModal();
+                await loadSavedTemplates();
+                showSuccess(`Saved template: ${name}`);
+            } catch (error) {
+                showError(`Template save failed: ${error.message}`);
+            }
+        }
+
+        async function loadSavedTemplates() {
+            const container = document.getElementById('saved-templates-grid');
+            if (!container) return;
+            try {
+                const response = await fetch('/api/templates');
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to load templates');
+                const templates = result.templates || [];
+                container.innerHTML = templates.length ? templates.map(template => {
+                    const configuration = template.configuration || {};
+                    return `<article class="template-card">
+                        <strong>${escapeTemplateText(template.name)}</strong>
+                        <p style="color: var(--gray); font-size: .82rem; margin-top: 6px; min-height: 34px;">${escapeTemplateText(template.description || 'Reusable API request configuration')}</p>
+                        <div class="template-card-meta">
+                            <span class="template-chip">${escapeTemplateText(configuration.method || 'GET')}</span>
+                            <span class="template-chip" title="${escapeTemplateText(configuration.endpoint || '')}">${escapeTemplateText(configuration.endpoint || '/')}</span>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-primary" style="padding: 8px 12px; font-size: .8rem; flex: 1;" onclick="applySavedTemplate('${template.id}')"><i data-lucide="download"></i> Use</button>
+                            <button class="btn" style="padding: 8px 10px; border: 1px solid var(--border); background: white; color: var(--danger);" title="Delete template" onclick="deleteSavedTemplate('${template.id}')"><i data-lucide="trash-2"></i></button>
+                        </div>
+                    </article>`;
+                }).join('') : `<div style="grid-column: 1 / -1; text-align: center; padding: 42px; color: var(--gray);"><i data-lucide="bookmark" style="width: 40px; height: 40px; opacity: .35; margin-bottom: 12px;"></i><p>No saved templates yet.</p><p style="font-size: .82rem; margin-top: 5px;">Save a configured request from Test Plan to see it here.</p></div>`;
+                lucide.createIcons();
+            } catch (error) {
+                container.innerHTML = '<p style="color: var(--danger);">Unable to load saved templates.</p>';
+            }
+        }
+
+        async function applySavedTemplate(templateId) {
+            try {
+                const response = await fetch('/api/templates');
+                const result = await response.json();
+                const template = (result.templates || []).find(item => item.id === templateId);
+                if (!template) throw new Error('Template not found');
+                const configuration = template.configuration || {};
+                document.getElementById('environment').value = configuration.environment || 'custom';
+                document.getElementById('customUrl').value = configuration.baseUrl || '';
+                document.getElementById('endpoint').value = configuration.endpoint || '';
+                document.getElementById('method').value = configuration.method || 'GET';
+                document.getElementById('payload').value = configuration.payload || '';
+                document.getElementById('field-name').value = configuration.fieldName || '';
+                document.getElementById('search-txt').value = configuration.searchText || '';
+                const parameterRadio = document.querySelector(`input[name="param_type"][value="${configuration.parameterType || 'query'}"]`);
+                if (parameterRadio) parameterRadio.checked = true;
+                document.getElementById('environment').dispatchEvent(new Event('change', { bubbles: true }));
+                document.getElementById('method').dispatchEvent(new Event('change', { bubbles: true }));
+                payloadInput.dispatchEvent(new Event('input', { bubbles: true }));
+                navigateTo('test-plan-api-selection', 'nav-test-plan');
+                showSuccess(`Applied template: ${template.name}`);
+            } catch (error) {
+                showError(`Unable to apply template: ${error.message}`);
+            }
+        }
+
+        async function deleteSavedTemplate(templateId) {
+            if (!window.confirm('Delete this saved template?')) return;
+            try {
+                const response = await fetch(`/api/templates/${templateId}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (!response.ok || !result.success) throw new Error(result.error || 'Unable to delete template');
+                await loadSavedTemplates();
+                showSuccess('Template deleted');
+            } catch (error) {
+                showError(`Template delete failed: ${error.message}`);
+            }
+        }
+
         async function saveToLocal() { hideExportOptions(); await downloadExcel(); }
 
         async function saveToDatabase() {
@@ -7110,16 +8124,11 @@ ${sampleOutput}`;
             });
 
             try {
-                console.log("allCases:", allCases);
-                console.log("Save allCases =", allCases);
-                console.log("Save count =", allCases ? allCases.length : 0);
                 if (!allCases || allCases.length === 0) {
                     showError("No generated test cases available for export");
                     return;
                 }
                 showSuccess('Saving test cases to database...');
-                console.log("Save allCases =", allCases);
-                console.log("Save count =", allCases ? allCases.length : 0);
                 const res = await fetch('/api/save-to-database', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ test_cases: allCases, endpoint, method, payload: payloadInput.value, field_name: document.getElementById('field-name').value, search_string: document.getElementById('search-txt').value, field_configs: fieldConfigs, baseUrl, param_type: document.querySelector('input[name="param_type"]:checked').value, environment: selectedEnvironment })
