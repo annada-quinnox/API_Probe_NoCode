@@ -36,16 +36,21 @@ class TestCaseDatabase:
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default database configuration."""
         return {
-            'server': 'LPT2149-B1',
-            'database': 'TestCasesDB',
+            'server': '172.31.24.173',
+            'port': 1433,
+            'database': 'APIProbeDB',
+            'username': 'api_probe_user',
+            'password': 'Annada@123',
             'driver': '{ODBC Driver 17 for SQL Server}',
-            'use_windows_auth': True  # Use Windows Authentication
+            'use_windows_auth': False
         }
     
     def _build_connection_string(self, config: Dict[str, Any]) -> str:
         """Build ODBC connection string from configuration."""
         driver = config.get('driver', '{ODBC Driver 17 for SQL Server}')
         server = config['server']
+        if config.get('port'):
+            server = f"{server},{config['port']}"
         database = config['database']
         
         # Build base connection string
