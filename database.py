@@ -36,6 +36,9 @@ class TestCaseDatabase:
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default database configuration."""
         return {
+            # 'server': 'LPT2149-B1',
+            # 'database': 'TestCasesDB',
+            # 'use_windows_auth': True  # Use Windows Authentication
             'server': '172.31.24.173',
             'port': 1433,
             'database': 'APIProbeDB',
